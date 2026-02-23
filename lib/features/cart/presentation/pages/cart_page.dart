@@ -1,66 +1,66 @@
 import 'package:flutter/material.dart';
-import '../../domain/entities/cart_item.dart';
-import '../../../products/data/mock_data/mock_products.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/storage/user_storage.dart';
+import '../../domain/entities/cart_item.dart';
+import '../providers/cart_provider.dart';
+import '../../../products/presentation/pages/product_detail_page.dart';
 
-class CartPage extends StatefulWidget {
+class CartPage extends ConsumerWidget {
   const CartPage({super.key});
 
   @override
-  State<CartPage> createState() => _CartPageState();
-}
+  Widget build(BuildContext context, WidgetRef ref) {
+    return FutureBuilder<int?>(
+      future: UserStorage.getUserId(),
+      builder: (context, snapshot) {
+        if (!snapshot.hasData || snapshot.data == null) {
+          return const Scaffold(
+            body: Center(child: CircularProgressIndicator()),
+          );
+        }
 
-class _CartPageState extends State<CartPage> {
-  // Mock cart items (client-side)
-  List<CartItem> _cartItems = [
-    CartItem(product: MockProducts.products[0], quantity: 2),
-    CartItem(product: MockProducts.products[2], quantity: 1),
-    CartItem(product: MockProducts.products[4], quantity: 3),
-  ];
+        final userId = snapshot.data!;
+        final cartAsync = ref.watch(cartNotifierProvider(userId));
 
-  double get _totalPrice {
-    return _cartItems.fold(0, (sum, item) => sum + item.totalPrice);
-  }
+        return Scaffold(
+          appBar: AppBar(
+            title: const Text('Giỏ Hàng'),
+            backgroundColor: Colors.transparent,
+            elevation: 0,
+          ),
+          body: cartAsync.when(
+            data: (cartItems) {
+              if (cartItems.isEmpty) {
+                return _buildEmptyCart();
+              }
 
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Giỏ Hàng'),
-      ),
-      body: _cartItems.isEmpty
-          ? _buildEmptyCart()
-          : Column(
-              children: [
-                Expanded(
-                  child: ListView.builder(
-                    padding: const EdgeInsets.all(16),
-                    itemCount: _cartItems.length,
-                    itemBuilder: (context, index) {
-                      final item = _cartItems[index];
-                      return _CartItemCard(
-                        item: item,
-                        onQuantityChanged: (newQuantity) {
-                          setState(() {
-                            if (newQuantity <= 0) {
-                              _cartItems.removeAt(index);
-                            } else {
-                              item.quantity = newQuantity;
-                            }
-                          });
-                        },
-                        onRemove: () {
-                          setState(() {
-                            _cartItems.removeAt(index);
-                          });
-                        },
-                      );
-                    },
+              final totalPrice = cartItems.fold<double>(
+                0,
+                (sum, item) => sum + item.totalPrice,
+              );
+
+              return Column(
+                children: [
+                  Expanded(
+                    child: ListView.builder(
+                      padding: const EdgeInsets.all(16),
+                      itemCount: cartItems.length,
+                      itemBuilder: (context, index) {
+                        final item = cartItems[index];
+                        return _CartItemCard(item: item, userId: userId);
+                      },
+                    ),
                   ),
-                ),
-                _buildCheckoutBar(),
-              ],
-            ),
+                  _buildCheckoutBar(context, totalPrice),
+                ],
+              );
+            },
+            loading: () => const Center(child: CircularProgressIndicator()),
+            error: (error, stack) => Center(child: Text('Lỗi: $error')),
+          ),
+        );
+      },
     );
   }
 
@@ -94,17 +94,29 @@ class _CartPageState extends State<CartPage> {
           const SizedBox(height: 8),
           const Text(
             'Thêm sản phẩm vào giỏ hàng để tiếp tục',
-            style: TextStyle(
-              fontSize: 14,
-              color: AppColors.textSecondary,
-            ),
+            style: TextStyle(fontSize: 14, color: AppColors.textSecondary),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildCheckoutBar() {
+  Widget _buildCheckoutBar(BuildContext context, double totalPrice) {
+    String _formatPrice(double price) {
+      final priceInt = price.toInt();
+      final priceString = priceInt.toString();
+      final buffer = StringBuffer();
+
+      for (int i = 0; i < priceString.length; i++) {
+        if (i > 0 && (priceString.length - i) % 3 == 0) {
+          buffer.write('.');
+        }
+        buffer.write(priceString[i]);
+      }
+
+      return '${buffer.toString()} đ';
+    }
+
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -133,7 +145,7 @@ class _CartPageState extends State<CartPage> {
                   ),
                 ),
                 Text(
-                  '${_totalPrice.toStringAsFixed(0)}đ',
+                  _formatPrice(totalPrice),
                   style: const TextStyle(
                     fontSize: 24,
                     fontWeight: FontWeight.bold,
@@ -147,7 +159,6 @@ class _CartPageState extends State<CartPage> {
               width: double.infinity,
               child: ElevatedButton(
                 onPressed: () {
-                  // TODO: Navigate to checkout
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(
                       content: Text('Tính năng đang phát triển'),
@@ -168,151 +179,191 @@ class _CartPageState extends State<CartPage> {
   }
 }
 
-class _CartItemCard extends StatelessWidget {
+class _CartItemCard extends ConsumerWidget {
   final CartItem item;
-  final Function(int) onQuantityChanged;
-  final VoidCallback onRemove;
+  final int userId;
 
-  const _CartItemCard({
-    required this.item,
-    required this.onQuantityChanged,
-    required this.onRemove,
-  });
+  const _CartItemCard({required this.item, required this.userId});
+
+  String _formatPrice(double price) {
+    final priceInt = price.toInt();
+    final priceString = priceInt.toString();
+    final buffer = StringBuffer();
+
+    for (int i = 0; i < priceString.length; i++) {
+      if (i > 0 && (priceString.length - i) % 3 == 0) {
+        buffer.write('.');
+      }
+      buffer.write(priceString[i]);
+    }
+
+    return '${buffer.toString()} đ';
+  }
 
   @override
-  Widget build(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 16),
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 2),
+  Widget build(BuildContext context, WidgetRef ref) {
+    final cartNotifier = ref.read(cartNotifierProvider(userId).notifier);
+    final countNotifier = ref.read(cartCountNotifierProvider(userId).notifier);
+
+    return GestureDetector(
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => ProductDetailPage(product: item.product),
           ),
-        ],
-      ),
-      child: Row(
-        children: [
-          // Product Image
-          Container(
-            width: 80,
-            height: 80,
-            decoration: BoxDecoration(
-              color: AppColors.primaryVeryLight,
-              borderRadius: BorderRadius.circular(12),
+        );
+      },
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 16),
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.05),
+              blurRadius: 10,
+              offset: const Offset(0, 2),
             ),
-            child: item.product.images.isNotEmpty
-                ? ClipRRect(
-                    borderRadius: BorderRadius.circular(12),
-                    child: Image.network(
-                      item.product.images[0],
-                      fit: BoxFit.cover,
-                      loadingBuilder: (context, child, loadingProgress) {
-                        if (loadingProgress == null) return child;
-                        return const Center(
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            valueColor: AlwaysStoppedAnimation<Color>(
-                              AppColors.primary,
-                            ),
-                          ),
-                        );
-                      },
-                      errorBuilder: (context, error, stackTrace) {
-                        return const Icon(
-                          Icons.pets,
-                          color: AppColors.primary,
-                        );
-                      },
-                    ),
-                  )
-                : const Icon(
-                    Icons.pets,
-                    color: AppColors.primary,
-                  ),
-          ),
-          const SizedBox(width: 12),
-          // Product Info
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  item.product.name,
-                  style: const TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                    color: AppColors.textPrimary,
-                  ),
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  '${item.product.finalPrice.toStringAsFixed(0)}đ',
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    color: AppColors.primary,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Row(
-                  children: [
-                    // Quantity selector
-                    Container(
-                      decoration: BoxDecoration(
-                        border: Border.all(color: AppColors.textLight),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          IconButton(
-                            icon: const Icon(Icons.remove, size: 18),
-                            padding: EdgeInsets.zero,
-                            constraints: const BoxConstraints(),
-                            onPressed: () {
-                              onQuantityChanged(item.quantity - 1);
-                            },
-                          ),
-                          Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 12),
-                            child: Text(
-                              '${item.quantity}',
-                              style: const TextStyle(
-                                fontSize: 14,
-                                fontWeight: FontWeight.w600,
+          ],
+        ),
+        child: Row(
+          children: [
+            // Product Image
+            Container(
+              width: 80,
+              height: 80,
+              decoration: BoxDecoration(
+                color: AppColors.primaryVeryLight,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: item.product.images.isNotEmpty
+                  ? ClipRRect(
+                      borderRadius: BorderRadius.circular(12),
+                      child: Image.network(
+                        item.product.images[0],
+                        fit: BoxFit.cover,
+                        loadingBuilder: (context, child, loadingProgress) {
+                          if (loadingProgress == null) return child;
+                          return const Center(
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              valueColor: AlwaysStoppedAnimation<Color>(
+                                AppColors.primary,
                               ),
                             ),
-                          ),
-                          IconButton(
-                            icon: const Icon(Icons.add, size: 18),
-                            padding: EdgeInsets.zero,
-                            constraints: const BoxConstraints(),
-                            onPressed: () {
-                              onQuantityChanged(item.quantity + 1);
-                            },
-                          ),
-                        ],
+                          );
+                        },
+                        errorBuilder: (context, error, stackTrace) {
+                          return const Icon(
+                            Icons.pets,
+                            color: AppColors.primary,
+                          );
+                        },
                       ),
-                    ),
-                    const Spacer(),
-                    IconButton(
-                      icon: const Icon(Icons.delete_outline, size: 20),
-                      color: AppColors.error,
-                      onPressed: onRemove,
-                    ),
-                  ],
-                ),
-              ],
+                    )
+                  : const Icon(Icons.pets, color: AppColors.primary),
             ),
-          ),
-        ],
+            const SizedBox(width: 12),
+            // Product Info
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    item.product.name,
+                    style: const TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.textPrimary,
+                    ),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    _formatPrice(item.product.finalPrice),
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.primary,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      // Quantity selector
+                      Container(
+                        decoration: BoxDecoration(
+                          border: Border.all(color: AppColors.textLight),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            IconButton(
+                              icon: const Icon(Icons.remove, size: 18),
+                              padding: EdgeInsets.zero,
+                              constraints: const BoxConstraints(),
+                              onPressed: () async {
+                                if (item.quantity > 1) {
+                                  await cartNotifier.updateQuantity(
+                                    item.product.productId,
+                                    item.quantity - 1,
+                                  );
+                                  await countNotifier.refresh();
+                                }
+                              },
+                            ),
+                            Padding(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 12,
+                              ),
+                              child: Text(
+                                '${item.quantity}',
+                                style: const TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ),
+                            IconButton(
+                              icon: const Icon(Icons.add, size: 18),
+                              padding: EdgeInsets.zero,
+                              constraints: const BoxConstraints(),
+                              onPressed: () async {
+                                if (item.quantity <
+                                    item.product.stockQuantity) {
+                                  await cartNotifier.updateQuantity(
+                                    item.product.productId,
+                                    item.quantity + 1,
+                                  );
+                                  await countNotifier.refresh();
+                                }
+                              },
+                            ),
+                          ],
+                        ),
+                      ),
+                      const Spacer(),
+                      IconButton(
+                        icon: const Icon(Icons.delete_outline, size: 20),
+                        color: AppColors.error,
+                        onPressed: () async {
+                          await cartNotifier.removeFromCart(
+                            item.product.productId,
+                          );
+                          await countNotifier.refresh();
+                        },
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

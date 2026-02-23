@@ -16,6 +16,9 @@ class ApiEndpoints {
   static const String updateProfile = '/user/profile';
   static const String changePassword = '/user/change-password';
 
+  // Category endpoints
+  static const String getCategories = '/categories';
+
   // Pet endpoints (ví dụ cho Pet Shop)
   static const String getPets = '/pets';
   static const String getPetById = '/pets'; // /pets/{id}

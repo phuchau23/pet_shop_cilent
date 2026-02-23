@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/storage/token_storage.dart';
+import '../../../../core/storage/user_storage.dart';
 import '../../../auth/presentation/pages/login_page.dart';
 
 class ProfilePage extends StatelessWidget {
@@ -122,6 +123,7 @@ class ProfilePage extends StatelessWidget {
                     titleColor: AppColors.error,
                     onTap: () async {
                       await TokenStorage.clearToken();
+                      await UserStorage.clearUser();
                       if (context.mounted) {
                         Navigator.of(context).pushAndRemoveUntil(
                           MaterialPageRoute(

@@ -5,6 +5,7 @@ import '../../domain/repositories/auth_repository_impl.dart';
 import '../../data/datasources/remote/auth_remote_data_source.dart';
 import '../../../../core/network/api_client.dart';
 import '../../../../core/storage/token_storage.dart';
+import '../../../../core/storage/user_storage.dart';
 import '../../../../core/widgets/bottom_nav_bar.dart';
 
 class LoginPage extends StatefulWidget {
@@ -67,6 +68,14 @@ class _LoginPageState extends State<LoginPage> {
           expiresAt: authResponse.expiresAt,
         );
         print('💾 Token saved to storage');
+
+        // Lưu thông tin user
+        await UserStorage.saveUser(
+          userId: authResponse.user.userId,
+          email: authResponse.user.email,
+          fullName: authResponse.user.fullName,
+        );
+        print('💾 User info saved');
 
         // Navigate to home page
         if (mounted) {

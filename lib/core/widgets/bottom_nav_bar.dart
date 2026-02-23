@@ -23,7 +23,6 @@ class _BottomNavBarState extends State<BottomNavBar> {
       const HomePage(),
       const _SearchPage(),
       const _LocationPage(),
-      const _FavoritesPage(),
       const ProfilePage(),
     ];
     print('✅ Pages initialized');
@@ -79,14 +78,9 @@ class _BottomNavBarState extends State<BottomNavBar> {
                   index: 2,
                 ),
                 _buildNavItem(
-                  icon: Icons.favorite_rounded,
-                  label: 'Favorites',
-                  index: 3,
-                ),
-                _buildNavItem(
                   icon: Icons.person_rounded,
                   label: 'Profile',
-                  index: 4,
+                  index: 3,
                 ),
               ],
             ),
@@ -162,14 +156,3 @@ class _LocationPage extends StatelessWidget {
   }
 }
 
-class _FavoritesPage extends StatelessWidget {
-  const _FavoritesPage();
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('Favorites')),
-      body: const Center(child: Text('Favorites Page')),
-    );
-  }
-}
