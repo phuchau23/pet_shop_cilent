@@ -18,6 +18,7 @@ class Product {
   final DateTime createdAt;
   final DateTime updatedAt;
   final List<String> images;
+  final List<String> availableSizes;
 
   Product({
     required this.productId,
@@ -36,6 +37,7 @@ class Product {
     required this.createdAt,
     required this.updatedAt,
     required this.images,
+    required this.availableSizes,
   });
 
   bool get isOnSale => salePrice != null && salePrice! < price;

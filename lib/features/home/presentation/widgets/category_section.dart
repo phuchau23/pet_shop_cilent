@@ -100,7 +100,7 @@ class CategoryItem extends StatelessWidget {
   final bool isSelected;
   final Map<String, dynamic> iconData;
 
-  const CategoryItem({
+  CategoryItem({
     super.key,
     required this.category,
     required this.isSelected,
@@ -134,7 +134,7 @@ class CategoryItem extends StatelessWidget {
           width: 80,
           height: 32,
           child: Text(
-            category.description ?? '',
+            category.name,
             style: TextStyle(
               fontSize: 12,
               fontWeight: FontWeight.w500,

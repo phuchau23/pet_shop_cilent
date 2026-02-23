@@ -19,6 +19,30 @@ class _ProductDetailPageState extends ConsumerState<ProductDetailPage> {
   int _quantity = 1;
   int _selectedImageIndex = 0;
   bool _isAddingToCart = false;
+  String? _selectedSize;
+
+  String _formatPrice(double price) {
+    final priceInt = price.toInt();
+    final priceString = priceInt.toString();
+    final buffer = StringBuffer();
+
+    for (int i = 0; i < priceString.length; i++) {
+      if (i > 0 && (priceString.length - i) % 3 == 0) {
+        buffer.write('.');
+      }
+      buffer.write(priceString[i]);
+    }
+    return '${buffer.toString()} đ';
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    // Set default selected size if available
+    if (widget.product.availableSizes.isNotEmpty) {
+      _selectedSize = widget.product.availableSizes.first;
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -27,11 +51,11 @@ class _ProductDetailPageState extends ConsumerState<ProductDetailPage> {
     return Scaffold(
       body: CustomScrollView(
         slivers: [
-          // App Bar với image
+          // App Bar
           SliverAppBar(
-            expandedHeight: 300,
             pinned: true,
-            backgroundColor: AppColors.primaryVeryLight,
+            backgroundColor: Colors.white,
+            elevation: 0,
             leading: Container(
               margin: const EdgeInsets.all(8),
               decoration: BoxDecoration(
@@ -74,44 +98,209 @@ class _ProductDetailPageState extends ConsumerState<ProductDetailPage> {
                 ),
               ),
             ],
-            flexibleSpace: FlexibleSpaceBar(
-              background: product.images.isNotEmpty
-                  ? Image.network(
-                      product.images[_selectedImageIndex],
-                      fit: BoxFit.cover,
-                      loadingBuilder: (context, child, loadingProgress) {
-                        if (loadingProgress == null) return child;
-                        return Container(
-                          color: AppColors.primaryVeryLight,
-                          child: const Center(
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              valueColor: AlwaysStoppedAnimation<Color>(
-                                AppColors.primary,
-                              ),
-                            ),
+          ),
+
+          // Product Images - Main image left, thumbnails right (at the top)
+          SliverToBoxAdapter(
+            child: Container(
+              color: Colors.white,
+              padding: const EdgeInsets.only(
+                left: 8,
+                right: 0,
+                top: 16,
+                bottom: 16,
+              ),
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  final screenWidth = constraints.maxWidth;
+                  final paddingLeft = 8.0;
+                  final paddingRight = 0;
+                  final spacing =
+                      12.0; // spacing between main image and thumbnails
+                  final thumbnailWidth = 80.0;
+                  final availableWidth =
+                      screenWidth -
+                      paddingLeft -
+                      paddingRight -
+                      spacing -
+                      thumbnailWidth;
+                  final mainImageSize = availableWidth;
+
+                  // Always 4 thumbnail slots
+                  final thumbnailSlotCount = 4;
+                  final thumbnailSpacing = 12.0;
+                  final totalThumbnailSpacing =
+                      thumbnailSpacing * (thumbnailSlotCount - 1);
+                  final thumbnailHeight =
+                      (mainImageSize - totalThumbnailSpacing) /
+                      thumbnailSlotCount;
+
+                  return Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Main image (left)
+                      SizedBox(
+                        width: mainImageSize,
+                        height: mainImageSize,
+                        child: Container(
+                          decoration: BoxDecoration(
+                            color: AppColors.primaryVeryLight,
+                            borderRadius: BorderRadius.circular(16),
                           ),
-                        );
-                      },
-                      errorBuilder: (context, error, stackTrace) {
-                        return Container(
-                          color: AppColors.primaryVeryLight,
-                          child: const Icon(
-                            Icons.pets,
-                            size: 100,
-                            color: AppColors.primary,
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(16),
+                            child: product.images.isNotEmpty
+                                ? Image.network(
+                                    product.images[_selectedImageIndex],
+                                    fit: BoxFit.cover,
+                                    loadingBuilder:
+                                        (context, child, loadingProgress) {
+                                          if (loadingProgress == null)
+                                            return child;
+                                          return Container(
+                                            color: AppColors.primaryVeryLight,
+                                            child: const Center(
+                                              child: CircularProgressIndicator(
+                                                strokeWidth: 2,
+                                                valueColor:
+                                                    AlwaysStoppedAnimation<
+                                                      Color
+                                                    >(AppColors.primary),
+                                              ),
+                                            ),
+                                          );
+                                        },
+                                    errorBuilder: (context, error, stackTrace) {
+                                      return Container(
+                                        color: AppColors.primaryVeryLight,
+                                        child: const Icon(
+                                          Icons.pets,
+                                          size: 100,
+                                          color: AppColors.primary,
+                                        ),
+                                      );
+                                    },
+                                  )
+                                : Container(
+                                    color: AppColors.primaryVeryLight,
+                                    child: const Icon(
+                                      Icons.pets,
+                                      size: 100,
+                                      color: AppColors.primary,
+                                    ),
+                                  ),
                           ),
-                        );
-                      },
-                    )
-                  : Container(
-                      color: AppColors.primaryVeryLight,
-                      child: const Icon(
-                        Icons.pets,
-                        size: 100,
-                        color: AppColors.primary,
+                        ),
                       ),
-                    ),
+                      // Thumbnails (right) - always 4 slots
+                      SizedBox(width: spacing),
+                      SizedBox(
+                        width: thumbnailWidth,
+                        height: mainImageSize,
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: List.generate(thumbnailSlotCount, (index) {
+                            final hasImage = index < product.images.length;
+                            final imageUrl = hasImage
+                                ? product.images[index]
+                                : null;
+
+                            return Padding(
+                              padding: EdgeInsets.only(
+                                bottom: index < thumbnailSlotCount - 1
+                                    ? thumbnailSpacing
+                                    : 0,
+                              ),
+                              child: hasImage
+                                  ? GestureDetector(
+                                      onTap: () {
+                                        setState(() {
+                                          _selectedImageIndex = index;
+                                        });
+                                      },
+                                      child: Container(
+                                        width: thumbnailWidth,
+                                        height: thumbnailHeight,
+                                        decoration: BoxDecoration(
+                                          borderRadius: BorderRadius.circular(
+                                            12,
+                                          ),
+                                          border: Border.all(
+                                            color: _selectedImageIndex == index
+                                                ? AppColors.primary
+                                                : AppColors.textLight,
+                                            width: _selectedImageIndex == index
+                                                ? 2
+                                                : 1,
+                                          ),
+                                        ),
+                                        child: ClipRRect(
+                                          borderRadius: BorderRadius.circular(
+                                            11,
+                                          ),
+                                          child: Image.network(
+                                            imageUrl!,
+                                            fit: BoxFit.cover,
+                                            loadingBuilder:
+                                                (
+                                                  context,
+                                                  child,
+                                                  loadingProgress,
+                                                ) {
+                                                  if (loadingProgress == null)
+                                                    return child;
+                                                  return Container(
+                                                    color: AppColors
+                                                        .primaryVeryLight,
+                                                    child: const Center(
+                                                      child: CircularProgressIndicator(
+                                                        strokeWidth: 2,
+                                                        valueColor:
+                                                            AlwaysStoppedAnimation<
+                                                              Color
+                                                            >(
+                                                              AppColors.primary,
+                                                            ),
+                                                      ),
+                                                    ),
+                                                  );
+                                                },
+                                            errorBuilder:
+                                                (context, error, stackTrace) {
+                                                  return Container(
+                                                    color: AppColors
+                                                        .primaryVeryLight,
+                                                    child: const Icon(
+                                                      Icons.pets,
+                                                      color: AppColors.primary,
+                                                    ),
+                                                  );
+                                                },
+                                          ),
+                                        ),
+                                      ),
+                                    )
+                                  : Container(
+                                      width: thumbnailWidth,
+                                      height: thumbnailHeight,
+                                      decoration: BoxDecoration(
+                                        borderRadius: BorderRadius.circular(12),
+                                        border: Border.all(
+                                          color: AppColors.textLight
+                                              .withOpacity(0.3),
+                                          width: 1,
+                                        ),
+                                        color: Colors.transparent,
+                                      ),
+                                    ),
+                            );
+                          }),
+                        ),
+                      ),
+                    ],
+                  );
+                },
+              ),
             ),
           ),
 
@@ -192,7 +381,7 @@ class _ProductDetailPageState extends ConsumerState<ProductDetailPage> {
                           children: [
                             if (product.isOnSale)
                               Text(
-                                '${product.price.toStringAsFixed(0)}đ',
+                                _formatPrice(product.price),
                                 style: const TextStyle(
                                   fontSize: 18,
                                   color: AppColors.textLight,
@@ -201,7 +390,7 @@ class _ProductDetailPageState extends ConsumerState<ProductDetailPage> {
                               ),
                             if (product.isOnSale) const SizedBox(width: 12),
                             Text(
-                              '${product.finalPrice.toStringAsFixed(0)}đ',
+                              _formatPrice(product.finalPrice),
                               style: const TextStyle(
                                 fontSize: 28,
                                 fontWeight: FontWeight.bold,
@@ -237,75 +426,64 @@ class _ProductDetailPageState extends ConsumerState<ProductDetailPage> {
                             ),
                           ],
                         ),
+                        // Size selector
+                        if (product.availableSizes.isNotEmpty) ...[
+                          const SizedBox(height: 24),
+                          const Text(
+                            'Select Size:',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
+                              color: AppColors.textPrimary,
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                          Wrap(
+                            spacing: 12,
+                            runSpacing: 12,
+                            children: product.availableSizes.map((size) {
+                              final isSelected = _selectedSize == size;
+                              return GestureDetector(
+                                onTap: () {
+                                  setState(() {
+                                    _selectedSize = size;
+                                  });
+                                },
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 20,
+                                    vertical: 12,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: isSelected
+                                        ? AppColors.primary
+                                        : Colors.white,
+                                    border: Border.all(
+                                      color: isSelected
+                                          ? AppColors.primary
+                                          : AppColors.textLight,
+                                      width: isSelected ? 2 : 1,
+                                    ),
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  child: Text(
+                                    size,
+                                    style: TextStyle(
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w600,
+                                      color: isSelected
+                                          ? Colors.white
+                                          : AppColors.textPrimary,
+                                    ),
+                                  ),
+                                ),
+                              );
+                            }).toList(),
+                          ),
+                        ],
                       ],
                     ),
                   ),
-
-                  // Image selector
-                  if (product.images.length > 1)
-                    SizedBox(
-                      height: 80,
-                      child: ListView.builder(
-                        scrollDirection: Axis.horizontal,
-                        padding: const EdgeInsets.symmetric(horizontal: 16),
-                        itemCount: product.images.length,
-                        itemBuilder: (context, index) {
-                          return GestureDetector(
-                            onTap: () {
-                              setState(() {
-                                _selectedImageIndex = index;
-                              });
-                            },
-                            child: Container(
-                              width: 80,
-                              margin: const EdgeInsets.only(right: 12),
-                              decoration: BoxDecoration(
-                                borderRadius: BorderRadius.circular(12),
-                                border: Border.all(
-                                  color: _selectedImageIndex == index
-                                      ? AppColors.primary
-                                      : AppColors.textLight,
-                                  width: _selectedImageIndex == index ? 2 : 1,
-                                ),
-                              ),
-                              child: ClipRRect(
-                                borderRadius: BorderRadius.circular(11),
-                                child: Image.network(
-                                  product.images[index],
-                                  fit: BoxFit.cover,
-                                  loadingBuilder:
-                                      (context, child, loadingProgress) {
-                                        if (loadingProgress == null)
-                                          return child;
-                                        return Container(
-                                          color: AppColors.primaryVeryLight,
-                                          child: const Center(
-                                            child: CircularProgressIndicator(
-                                              strokeWidth: 2,
-                                              valueColor:
-                                                  AlwaysStoppedAnimation<Color>(
-                                                    AppColors.primary,
-                                                  ),
-                                            ),
-                                          ),
-                                        );
-                                      },
-                                  errorBuilder: (context, error, stackTrace) {
-                                    return Container(
-                                      color: AppColors.primaryVeryLight,
-                                      child: const Icon(
-                                        Icons.pets,
-                                        color: AppColors.primary,
-                                      ),
-                                    );
-                                  },
-                                ),
-                              ),
-                            ),
-                          );
-                        },
-                      ),
-                    ),
 
                   const Divider(height: 32),
 
@@ -565,9 +743,7 @@ class _CartIconWithBadge extends ConsumerWidget {
                 onPressed: () {
                   Navigator.push(
                     context,
-                    MaterialPageRoute(
-                      builder: (context) => const CartPage(),
-                    ),
+                    MaterialPageRoute(builder: (context) => const CartPage()),
                   );
                 },
               ),

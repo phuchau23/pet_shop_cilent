@@ -96,6 +96,7 @@ class MockProducts {
         'https://images.unsplash.com/photo-1589924691995-400dc9ecc119?w=400',
         'https://images.unsplash.com/photo-1601758228041-f3b2795255f1?w=400',
       ],
+      availableSizes: ['1kg', '2kg', '5kg', '10kg'],
     ),
     Product(
       productId: 2,
@@ -115,6 +116,7 @@ class MockProducts {
       images: [
         'https://images.unsplash.com/photo-1601758228041-f3b2795255f1?w=400',
       ],
+      availableSizes: ['85g', '170g'],
     ),
     Product(
       productId: 3,
@@ -136,6 +138,7 @@ class MockProducts {
         'https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?w=400',
         'https://images.unsplash.com/photo-1574158622682-e40e69881006?w=400',
       ],
+      availableSizes: ['400g x12', '400g x24'],
     ),
     Product(
       productId: 4,
@@ -155,6 +158,7 @@ class MockProducts {
       images: [
         'https://images.unsplash.com/photo-1589924691995-400dc9ecc119?w=400',
       ],
+      availableSizes: ['1kg', '1.2kg', '2kg', '5kg'],
     ),
     Product(
       productId: 5,
@@ -175,6 +179,7 @@ class MockProducts {
       images: [
         'https://images.unsplash.com/photo-1601758228041-f3b2795255f1?w=400',
       ],
+      availableSizes: [],
     ),
     Product(
       productId: 6,
@@ -194,6 +199,7 @@ class MockProducts {
       images: [
         'https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?w=400',
       ],
+      availableSizes: [],
     ),
     Product(
       productId: 7,
@@ -213,6 +219,7 @@ class MockProducts {
       images: [
         'https://images.unsplash.com/photo-1574158622682-e40e69881006?w=400',
       ],
+      availableSizes: [],
     ),
     Product(
       productId: 8,
@@ -233,6 +240,7 @@ class MockProducts {
       images: [
         'https://images.unsplash.com/photo-1601758228041-f3b2795255f1?w=400',
       ],
+      availableSizes: [],
     ),
   ];
 

@@ -68,6 +68,7 @@ class CartRepositoryImpl implements CartRepository {
           createdAt: DateTime.now(),
           updatedAt: DateTime.now(),
           images: [item.productImageUrl],
+          availableSizes: [], // Cart items không lưu size
         );
 
         return CartItem(product: product, quantity: item.quantity);

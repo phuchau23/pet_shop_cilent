@@ -43,6 +43,7 @@ class ProductDto {
   final int brandId;
   final String brandName;
   final bool isActive;
+  final List<String> availableSizes;
   final List<ProductImageDto> images;
   final String createdAt;
   final String updatedAt;
@@ -58,6 +59,7 @@ class ProductDto {
     required this.brandId,
     required this.brandName,
     required this.isActive,
+    required this.availableSizes,
     required this.images,
     required this.createdAt,
     required this.updatedAt,
@@ -75,6 +77,9 @@ class ProductDto {
       brandId: json['brandId'] as int,
       brandName: json['brandName'] as String,
       isActive: json['isActive'] as bool,
+      availableSizes: (json['availableSizes'] as List<dynamic>? ?? [])
+          .map((item) => item.toString())
+          .toList(),
       images: (json['images'] as List? ?? [])
           .map((item) => ProductImageDto.fromJson(item as Map<String, dynamic>))
           .toList(),

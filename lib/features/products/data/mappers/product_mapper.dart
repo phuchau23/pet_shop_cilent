@@ -33,6 +33,7 @@ class ProductMapper {
       createdAt: DateTime.parse(dto.createdAt),
       updatedAt: DateTime.parse(dto.updatedAt),
       images: dto.images.map((img) => img.imageUrl).toList(),
+      availableSizes: dto.availableSizes,
     );
   }
 
