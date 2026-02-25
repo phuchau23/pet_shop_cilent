@@ -10,9 +10,7 @@ class ProfilePage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Tài Khoản'),
-      ),
+      appBar: AppBar(title: const Text('Tài Khoản')),
       body: SingleChildScrollView(
         child: Column(
           children: [
@@ -23,10 +21,7 @@ class ProfilePage extends StatelessWidget {
                 gradient: LinearGradient(
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
-                  colors: [
-                    AppColors.primaryVeryLight,
-                    Colors.white,
-                  ],
+                  colors: [AppColors.primaryVeryLight, Colors.white],
                 ),
               ),
               child: Column(
@@ -37,10 +32,7 @@ class ProfilePage extends StatelessWidget {
                     decoration: BoxDecoration(
                       color: AppColors.primary,
                       shape: BoxShape.circle,
-                      border: Border.all(
-                        color: Colors.white,
-                        width: 4,
-                      ),
+                      border: Border.all(color: Colors.white, width: 4),
                     ),
                     child: const Icon(
                       Icons.person,
@@ -49,21 +41,37 @@ class ProfilePage extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: 16),
-                  const Text(
-                    'Lê Phúc Hậu',
-                    style: TextStyle(
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold,
-                      color: AppColors.textPrimary,
-                    ),
+                  FutureBuilder<String?>(
+                    future: UserStorage.getUserFullName(),
+                    builder: (context, snapshot) {
+                      final fullName = snapshot.data?.trim();
+                      return Text(
+                        (fullName == null || fullName.isEmpty)
+                            ? 'User Name'
+                            : fullName,
+                        style: const TextStyle(
+                          fontSize: 24,
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.textPrimary,
+                        ),
+                      );
+                    },
                   ),
                   const SizedBox(height: 4),
-                  const Text(
-                    'phuchaulua123@gmail.com',
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: AppColors.textSecondary,
-                    ),
+                  FutureBuilder<String?>(
+                    future: UserStorage.getUserEmail(),
+                    builder: (context, snapshot) {
+                      final email = snapshot.data?.trim();
+                      return Text(
+                        (email == null || email.isEmpty)
+                            ? 'Chưa có email'
+                            : email,
+                        style: const TextStyle(
+                          fontSize: 14,
+                          color: AppColors.textSecondary,
+                        ),
+                      );
+                    },
                   ),
                 ],
               ),
@@ -201,10 +209,7 @@ class _ProfileMenuItem extends StatelessWidget {
                 ),
               ),
             ),
-            Icon(
-              Icons.chevron_right,
-              color: AppColors.textLight,
-            ),
+            Icon(Icons.chevron_right, color: AppColors.textLight),
           ],
         ),
       ),

@@ -9,4 +9,8 @@ class LoginUseCase {
   Future<AuthResponse> call(String email, String password) async {
     return await repository.login(email, password);
   }
+
+  Future<AuthResponse> loginWithGoogle(String idToken) async {
+    return await repository.loginWithGoogle(idToken);
+  }
 }

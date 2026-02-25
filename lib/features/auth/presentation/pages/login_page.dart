@@ -1,8 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter_svg/flutter_svg.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 
-import '../../domain/usecases/login_usecase.dart';
-import '../../domain/repositories/auth_repository_impl.dart';
 import '../../data/datasources/remote/auth_remote_data_source.dart';
+import '../../domain/entities/auth_response.dart';
+import '../../domain/repositories/auth_repository_impl.dart';
+import '../../domain/usecases/login_usecase.dart';
 import '../../../../core/network/api_client.dart';
 import '../../../../core/storage/token_storage.dart';
 import '../../../../core/storage/user_storage.dart';
@@ -16,15 +20,22 @@ class LoginPage extends StatefulWidget {
 }
 
 class _LoginPageState extends State<LoginPage> {
+  static const String _googleServerClientId = String.fromEnvironment(
+    'GOOGLE_SERVER_CLIENT_ID',
+    defaultValue:
+        '575215795478-hm9np6bf9iiprt7p32t0506ppcqv07di.apps.googleusercontent.com',
+  );
+
   final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
+
   bool _obscurePassword = true;
   bool _isLoading = false;
   String? _errorMessage;
 
-  // Initialize dependencies
   late final LoginUseCase _loginUseCase;
+  late final GoogleSignIn _googleSignIn;
 
   @override
   void initState() {
@@ -33,6 +44,11 @@ class _LoginPageState extends State<LoginPage> {
   }
 
   void _initializeDependencies() {
+    _googleSignIn = GoogleSignIn(
+      scopes: const ['email', 'profile'],
+      serverClientId: _googleServerClientId,
+    );
+
     final apiClient = ApiClient();
     final remoteDataSource = AuthRemoteDataSourceImpl(apiClient: apiClient);
     final repository = AuthRepositoryImpl(remoteDataSource: remoteDataSource);
@@ -47,82 +63,160 @@ class _LoginPageState extends State<LoginPage> {
   }
 
   Future<void> _handleLogin() async {
-    if (_formKey.currentState!.validate()) {
-      setState(() {
-        _isLoading = true;
-        _errorMessage = null;
-      });
+    if (!_formKey.currentState!.validate()) {
+      return;
+    }
 
-      try {
-        final email = _emailController.text.trim();
-        final password = _passwordController.text;
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+    });
 
-        print('🔐 Attempting login for: $email');
-        final authResponse = await _loginUseCase(email, password);
-        print('✅ Login successful!');
+    try {
+      final email = _emailController.text.trim();
+      final password = _passwordController.text;
 
-        // Lưu token vào storage
-        await TokenStorage.saveToken(
-          token: authResponse.token,
-          refreshToken: authResponse.refreshToken,
-          expiresAt: authResponse.expiresAt,
-        );
-        print('💾 Token saved to storage');
-
-        // Lưu thông tin user
-        await UserStorage.saveUser(
-          userId: authResponse.user.userId,
-          email: authResponse.user.email,
-          fullName: authResponse.user.fullName,
-        );
-        print('💾 User info saved');
-
-        // Navigate to home page
-        if (mounted) {
-          print('🚀 Navigating to BottomNavBar...');
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(
-                'Đăng nhập thành công! Xin chào ${authResponse.user.fullName}',
-              ),
-              backgroundColor: Colors.green,
-            ),
-          );
-
-          // Delay nhỏ để đảm bảo token đã được lưu
-          await Future.delayed(const Duration(milliseconds: 100));
-
-          if (mounted) {
-            Navigator.of(context).pushAndRemoveUntil(
-              MaterialPageRoute(builder: (context) => const BottomNavBar()),
-              (route) => false,
-            );
-            print('✅ Navigation completed');
-          }
-        }
-      } catch (e) {
-        print('❌ Login error: $e');
-        final errorMsg = e.toString().replaceAll('Exception: ', '');
+      print('Attempting login for: $email');
+      final authResponse = await _loginUseCase(email, password);
+      print('Login successful!');
+      await _handleLoginSuccess(authResponse);
+    } catch (error) {
+      _handleLoginError(error);
+    } finally {
+      if (mounted) {
         setState(() {
-          _errorMessage = errorMsg;
+          _isLoading = false;
         });
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(errorMsg),
-              backgroundColor: Colors.red,
-              duration: const Duration(seconds: 4),
-            ),
-          );
-        }
-      } finally {
-        if (mounted) {
-          setState(() {
-            _isLoading = false;
-          });
-        }
       }
     }
+  }
+
+  Future<void> _handleGoogleLogin() async {
+    if (_isLoading) {
+      return;
+    }
+
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+    });
+
+    try {
+      await _googleSignIn.signOut();
+      final googleUser = await _googleSignIn.signIn();
+
+      if (googleUser == null) {
+        print('ℹ️ Google login cancelled by user');
+        return;
+      }
+
+      final googleAuth = await googleUser.authentication;
+      final idToken = googleAuth.idToken;
+
+      if (idToken == null || idToken.isEmpty) {
+        throw Exception('Không thể lấy Google idToken. Vui lòng thử lại.');
+      }
+
+      final authResponse = await _loginUseCase.loginWithGoogle(idToken);
+      await _handleLoginSuccess(authResponse);
+    } on PlatformException catch (error) {
+      _handleGooglePlatformError(error);
+    } catch (error) {
+      _handleLoginError(error);
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
+  }
+
+  void _handleGooglePlatformError(PlatformException error) {
+    final details =
+        '${error.code} ${error.message ?? ''} ${error.details ?? ''}'
+            .toLowerCase();
+
+    if (error.code == 'sign_in_failed' &&
+        details.contains('apiexception: 10')) {
+      _handleLoginError(
+        Exception(
+          'Google Sign-In chưa được cấu hình đúng cho Android (DEVELOPER_ERROR 10). '
+          'Hãy tạo OAuth client Android với package com.example.pet_shop và SHA1 debug, '
+          'sau đó chạy lại ứng dụng.',
+        ),
+      );
+      return;
+    }
+
+    _handleLoginError(
+      Exception(
+        'Google Sign-In thất bại (${error.code}): ${error.message ?? ''}',
+      ),
+    );
+  }
+
+  Future<void> _handleLoginSuccess(AuthResponse authResponse) async {
+    await TokenStorage.saveToken(
+      token: authResponse.token,
+      refreshToken: authResponse.refreshToken,
+      expiresAt: authResponse.expiresAt,
+    );
+    print('Token saved to storage');
+
+    await UserStorage.saveUser(
+      userId: authResponse.user.userId,
+      email: authResponse.user.email,
+      fullName: authResponse.user.fullName,
+    );
+    print('User info saved');
+
+    if (!mounted) {
+      return;
+    }
+
+    print('Navigating to BottomNavBar...');
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          'Đăng nhập thành công! Xin chào ${authResponse.user.fullName}',
+        ),
+        backgroundColor: Colors.green,
+      ),
+    );
+
+    await Future.delayed(const Duration(milliseconds: 100));
+
+    if (!mounted) {
+      return;
+    }
+
+    Navigator.of(context).pushAndRemoveUntil(
+      MaterialPageRoute(builder: (context) => const BottomNavBar()),
+      (route) => false,
+    );
+    print('Navigation completed');
+  }
+
+  void _handleLoginError(Object error) {
+    print('Login error: $error');
+    final errorMsg = error.toString().replaceAll('Exception: ', '');
+
+    setState(() {
+      _errorMessage = errorMsg;
+    });
+
+    if (!mounted) {
+      return;
+    }
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(errorMsg),
+        backgroundColor: Colors.red,
+        duration: const Duration(seconds: 4),
+      ),
+    );
   }
 
   @override
@@ -152,10 +246,9 @@ class _LoginPageState extends State<LoginPage> {
                     mainAxisAlignment: MainAxisAlignment.center,
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      // Title
                       Text(
                         'Đăng Nhập',
-                        textAlign: TextAlign.left,
+                        textAlign: TextAlign.center,
                         style: TextStyle(
                           fontSize: 56,
                           fontWeight: FontWeight.bold,
@@ -166,7 +259,7 @@ class _LoginPageState extends State<LoginPage> {
                       const SizedBox(height: 8),
                       Text(
                         'Để tiếp tục với chúng tôi, bạn phải đăng nhập',
-                        textAlign: TextAlign.left,
+                        textAlign: TextAlign.center,
                         style: TextStyle(
                           fontSize: 15,
                           color: Colors.grey.shade700,
@@ -174,7 +267,6 @@ class _LoginPageState extends State<LoginPage> {
                         ),
                       ),
                       const SizedBox(height: 40),
-                      // Error Message
                       if (_errorMessage != null)
                         Container(
                           padding: const EdgeInsets.all(12),
@@ -204,7 +296,6 @@ class _LoginPageState extends State<LoginPage> {
                             ],
                           ),
                         ),
-                      // Email Label
                       Padding(
                         padding: const EdgeInsets.only(bottom: 8.0),
                         child: Text(
@@ -216,7 +307,6 @@ class _LoginPageState extends State<LoginPage> {
                           ),
                         ),
                       ),
-                      // Email Field
                       TextFormField(
                         controller: _emailController,
                         keyboardType: TextInputType.emailAddress,
@@ -271,8 +361,6 @@ class _LoginPageState extends State<LoginPage> {
                         },
                       ),
                       const SizedBox(height: 24),
-
-                      // Password Label
                       Padding(
                         padding: const EdgeInsets.only(bottom: 8.0),
                         child: Text(
@@ -284,7 +372,6 @@ class _LoginPageState extends State<LoginPage> {
                           ),
                         ),
                       ),
-                      // Password Field
                       TextFormField(
                         controller: _passwordController,
                         obscureText: _obscurePassword,
@@ -353,14 +440,10 @@ class _LoginPageState extends State<LoginPage> {
                         },
                       ),
                       const SizedBox(height: 12),
-
-                      // Forgot Password
                       Align(
                         alignment: Alignment.centerRight,
                         child: TextButton(
-                          onPressed: () {
-                            // TODO: Navigate to forgot password
-                          },
+                          onPressed: () {},
                           style: TextButton.styleFrom(
                             padding: const EdgeInsets.symmetric(horizontal: 4),
                             minimumSize: Size.zero,
@@ -377,8 +460,6 @@ class _LoginPageState extends State<LoginPage> {
                         ),
                       ),
                       const SizedBox(height: 32),
-
-                      // Sign in Button
                       SizedBox(
                         height: 52,
                         child: ElevatedButton(
@@ -413,8 +494,6 @@ class _LoginPageState extends State<LoginPage> {
                         ),
                       ),
                       const SizedBox(height: 32),
-
-                      // Social Login Text
                       Text(
                         'Nếu bạn không có tài khoản, hãy tạo mới',
                         textAlign: TextAlign.center,
@@ -424,34 +503,30 @@ class _LoginPageState extends State<LoginPage> {
                         ),
                       ),
                       const SizedBox(height: 20),
-
-                      // Social Login Buttons
                       Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          // Apple Button
                           _buildSocialButton(
-                            icon: Icons.apple,
-                            onPressed: () {
-                              // TODO: Apple login
-                            },
+                            icon: SvgPicture.asset(
+                              'assets/icon/google_icon.svg',
+                              width: 44,
+                              height: 44,
+                            ),
+                            onPressed: _handleGoogleLogin,
                           ),
                           const SizedBox(width: 16),
-                          // Google Button
                           _buildSocialButton(
-                            icon: Icons.g_mobiledata,
-                            onPressed: () {
-                              // TODO: Google login
-                            },
+                            icon: const Icon(Icons.apple, size: 44),
+                            onPressed: () {},
                           ),
                           const SizedBox(width: 16),
-                          // Facebook Button
                           _buildSocialButton(
-                            icon: Icons.facebook,
-                            color: Colors.blue.shade700,
-                            onPressed: () {
-                              // TODO: Facebook login
-                            },
+                            icon: Icon(
+                              Icons.facebook,
+                              color: Colors.blue.shade700,
+                              size: 44,
+                            ),
+                            onPressed: () {},
                           ),
                         ],
                       ),
@@ -467,26 +542,18 @@ class _LoginPageState extends State<LoginPage> {
   }
 
   Widget _buildSocialButton({
-    required IconData icon,
+    required Widget icon,
     required VoidCallback onPressed,
-    Color? color,
   }) {
-    return Container(
+    return SizedBox(
       width: 56,
       height: 56,
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.grey.shade300, width: 1),
-      ),
       child: Material(
         color: Colors.transparent,
         child: InkWell(
           onTap: onPressed,
           borderRadius: BorderRadius.circular(12),
-          child: Center(
-            child: Icon(icon, color: color ?? Colors.grey.shade800, size: 24),
-          ),
+          child: Center(child: icon),
         ),
       ),
     );
