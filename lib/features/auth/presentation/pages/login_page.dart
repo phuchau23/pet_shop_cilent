@@ -7,6 +7,7 @@ import '../../../../core/network/api_client.dart';
 import '../../../../core/storage/token_storage.dart';
 import '../../../../core/storage/user_storage.dart';
 import '../../../../core/widgets/bottom_nav_bar.dart';
+import '../../../../core/widgets/shipper_bottom_nav_bar.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -74,6 +75,7 @@ class _LoginPageState extends State<LoginPage> {
           userId: authResponse.user.userId,
           email: authResponse.user.email,
           fullName: authResponse.user.fullName,
+          userRole: authResponse.user.userRole,
         );
         print('💾 User info saved');
 
@@ -93,11 +95,17 @@ class _LoginPageState extends State<LoginPage> {
           await Future.delayed(const Duration(milliseconds: 100));
 
           if (mounted) {
+            // Route theo role: 1 = Customer, 3 = Shipper
+            final userRole = authResponse.user.userRole;
+            final homeWidget = (userRole == '3' || userRole == 'Shipper')
+                ? const ShipperBottomNavBar()
+                : const BottomNavBar();
+
             Navigator.of(context).pushAndRemoveUntil(
-              MaterialPageRoute(builder: (context) => const BottomNavBar()),
+              MaterialPageRoute(builder: (context) => homeWidget),
               (route) => false,
             );
-            print('✅ Navigation completed');
+            print('✅ Navigation completed for role: $userRole');
           }
         }
       } catch (e) {

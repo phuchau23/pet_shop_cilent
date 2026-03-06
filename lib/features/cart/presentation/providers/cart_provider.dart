@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../products/domain/entities/product.dart';
+import '../../../products/domain/entities/product_size.dart';
 import '../../domain/entities/cart_item.dart';
 import '../../data/repositories/cart_repository.dart';
 import '../../../../core/storage/user_storage.dart';
@@ -41,23 +42,27 @@ class CartNotifier extends StateNotifier<AsyncValue<List<CartItem>>> {
       final items = await _repository.getCartItems(_userId);
       state = AsyncValue.data(items);
     } catch (e, stack) {
-      state = AsyncValue.error(e, stack);
+      print('❌ Error in _loadCart: $e');
+      // Thay vì set error, return empty list để tránh loading xoay mãi
+      state = AsyncValue.data([]);
     }
   }
 
-  Future<void> addToCart(Product product, int quantity) async {
+  Future<void> addToCart(Product product, ProductSize productSize, int quantity) async {
     try {
-      await _repository.addToCart(_userId, product, quantity);
+      await _repository.addToCart(_userId, product, productSize, quantity);
       await _loadCart();
     } catch (e) {
       print('❌ Error adding to cart: $e');
-      rethrow;
+      // Không rethrow để tránh loading xoay mãi
+      // Chỉ log error và reload cart
+      await _loadCart();
     }
   }
 
-  Future<void> updateQuantity(int productId, int quantity) async {
+  Future<void> updateQuantity(int productId, int productSizeId, int quantity) async {
     try {
-      await _repository.updateQuantity(_userId, productId, quantity);
+      await _repository.updateQuantity(_userId, productId, productSizeId, quantity);
       await _loadCart();
     } catch (e) {
       print('❌ Error updating quantity: $e');
@@ -65,9 +70,9 @@ class CartNotifier extends StateNotifier<AsyncValue<List<CartItem>>> {
     }
   }
 
-  Future<void> removeFromCart(int productId) async {
+  Future<void> removeFromCart(int productId, int productSizeId) async {
     try {
-      await _repository.removeFromCart(_userId, productId);
+      await _repository.removeFromCart(_userId, productId, productSizeId);
       await _loadCart();
     } catch (e) {
       print('❌ Error removing from cart: $e');

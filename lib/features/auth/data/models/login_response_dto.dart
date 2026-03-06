@@ -13,10 +13,10 @@ class LoginResponseDto {
 
   factory LoginResponseDto.fromJson(Map<String, dynamic> json) {
     return LoginResponseDto(
-      token: json['token'] as String,
-      refreshToken: json['refreshToken'] as String,
-      expiresAt: json['expiresAt'] as String,
-      user: UserDto.fromJson(json['user'] as Map<String, dynamic>),
+      token: json['token'] as String? ?? '',
+      refreshToken: json['refreshToken'] as String? ?? '',
+      expiresAt: json['expiresAt'] as String? ?? '',
+      user: UserDto.fromJson(json['user'] as Map<String, dynamic>? ?? {}),
     );
   }
 }
@@ -36,10 +36,10 @@ class UserDto {
 
   factory UserDto.fromJson(Map<String, dynamic> json) {
     return UserDto(
-      userId: json['userId'] as int,
-      email: json['email'] as String,
-      fullName: json['fullName'] as String,
-      userRole: json['userRole'] as String,
+      userId: (json['userId'] as num?)?.toInt() ?? 0,
+      email: json['email'] as String? ?? '',
+      fullName: json['fullName'] as String? ?? '',
+      userRole: json['userRole'] as String? ?? 'Customer',
     );
   }
 }

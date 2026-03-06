@@ -16,8 +16,8 @@ class ApiResponse<T> {
     T Function(dynamic)? fromJsonT,
   ) {
     return ApiResponse<T>(
-      code: json['code'] as int,
-      message: json['message'] as String,
+      code: (json['code'] as num?)?.toInt() ?? (json['statusCode'] as num?)?.toInt() ?? 200,
+      message: json['message'] as String? ?? '',
       data: json['data'] != null && fromJsonT != null
           ? fromJsonT(json['data'])
           : json['data'] as T?,

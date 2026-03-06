@@ -82,23 +82,43 @@ const CartItemModelSchema = CollectionSchema(
       name: r'productSalePrice',
       type: IsarType.double,
     ),
-    r'productStatus': PropertySchema(
+    r'productSizeId': PropertySchema(
       id: 13,
+      name: r'productSizeId',
+      type: IsarType.long,
+    ),
+    r'productSizeName': PropertySchema(
+      id: 14,
+      name: r'productSizeName',
+      type: IsarType.string,
+    ),
+    r'productSizePrice': PropertySchema(
+      id: 15,
+      name: r'productSizePrice',
+      type: IsarType.double,
+    ),
+    r'productSizeStockQuantity': PropertySchema(
+      id: 16,
+      name: r'productSizeStockQuantity',
+      type: IsarType.long,
+    ),
+    r'productStatus': PropertySchema(
+      id: 17,
       name: r'productStatus',
       type: IsarType.bool,
     ),
     r'productStockQuantity': PropertySchema(
-      id: 14,
+      id: 18,
       name: r'productStockQuantity',
       type: IsarType.long,
     ),
     r'quantity': PropertySchema(
-      id: 15,
+      id: 19,
       name: r'quantity',
       type: IsarType.long,
     ),
     r'totalPrice': PropertySchema(
-      id: 16,
+      id: 20,
       name: r'totalPrice',
       type: IsarType.double,
     )
@@ -134,6 +154,7 @@ int _cartItemModelEstimateSize(
       bytesCount += 3 + value.length * 3;
     }
   }
+  bytesCount += 3 + object.productSizeName.length * 3;
   return bytesCount;
 }
 
@@ -156,10 +177,14 @@ void _cartItemModelSerialize(
   writer.writeString(offsets[10], object.productPetType);
   writer.writeDouble(offsets[11], object.productPrice);
   writer.writeDouble(offsets[12], object.productSalePrice);
-  writer.writeBool(offsets[13], object.productStatus);
-  writer.writeLong(offsets[14], object.productStockQuantity);
-  writer.writeLong(offsets[15], object.quantity);
-  writer.writeDouble(offsets[16], object.totalPrice);
+  writer.writeLong(offsets[13], object.productSizeId);
+  writer.writeString(offsets[14], object.productSizeName);
+  writer.writeDouble(offsets[15], object.productSizePrice);
+  writer.writeLong(offsets[16], object.productSizeStockQuantity);
+  writer.writeBool(offsets[17], object.productStatus);
+  writer.writeLong(offsets[18], object.productStockQuantity);
+  writer.writeLong(offsets[19], object.quantity);
+  writer.writeDouble(offsets[20], object.totalPrice);
 }
 
 CartItemModel _cartItemModelDeserialize(
@@ -182,9 +207,13 @@ CartItemModel _cartItemModelDeserialize(
   object.productPetType = reader.readStringOrNull(offsets[10]);
   object.productPrice = reader.readDouble(offsets[11]);
   object.productSalePrice = reader.readDoubleOrNull(offsets[12]);
-  object.productStatus = reader.readBool(offsets[13]);
-  object.productStockQuantity = reader.readLong(offsets[14]);
-  object.quantity = reader.readLong(offsets[15]);
+  object.productSizeId = reader.readLong(offsets[13]);
+  object.productSizeName = reader.readString(offsets[14]);
+  object.productSizePrice = reader.readDouble(offsets[15]);
+  object.productSizeStockQuantity = reader.readLong(offsets[16]);
+  object.productStatus = reader.readBool(offsets[17]);
+  object.productStockQuantity = reader.readLong(offsets[18]);
+  object.quantity = reader.readLong(offsets[19]);
   return object;
 }
 
@@ -222,12 +251,20 @@ P _cartItemModelDeserializeProp<P>(
     case 12:
       return (reader.readDoubleOrNull(offset)) as P;
     case 13:
-      return (reader.readBool(offset)) as P;
+      return (reader.readLong(offset)) as P;
     case 14:
-      return (reader.readLong(offset)) as P;
+      return (reader.readString(offset)) as P;
     case 15:
-      return (reader.readLong(offset)) as P;
+      return (reader.readDouble(offset)) as P;
     case 16:
+      return (reader.readLong(offset)) as P;
+    case 17:
+      return (reader.readBool(offset)) as P;
+    case 18:
+      return (reader.readLong(offset)) as P;
+    case 19:
+      return (reader.readLong(offset)) as P;
+    case 20:
       return (reader.readDouble(offset)) as P;
     default:
       throw IsarError('Unknown property with id $propertyId');
@@ -1659,6 +1696,320 @@ extension CartItemModelQueryFilter
   }
 
   QueryBuilder<CartItemModel, CartItemModel, QAfterFilterCondition>
+      productSizeIdEqualTo(int value) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'productSizeId',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<CartItemModel, CartItemModel, QAfterFilterCondition>
+      productSizeIdGreaterThan(
+    int value, {
+    bool include = false,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        include: include,
+        property: r'productSizeId',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<CartItemModel, CartItemModel, QAfterFilterCondition>
+      productSizeIdLessThan(
+    int value, {
+    bool include = false,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.lessThan(
+        include: include,
+        property: r'productSizeId',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<CartItemModel, CartItemModel, QAfterFilterCondition>
+      productSizeIdBetween(
+    int lower,
+    int upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.between(
+        property: r'productSizeId',
+        lower: lower,
+        includeLower: includeLower,
+        upper: upper,
+        includeUpper: includeUpper,
+      ));
+    });
+  }
+
+  QueryBuilder<CartItemModel, CartItemModel, QAfterFilterCondition>
+      productSizeNameEqualTo(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'productSizeName',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<CartItemModel, CartItemModel, QAfterFilterCondition>
+      productSizeNameGreaterThan(
+    String value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        include: include,
+        property: r'productSizeName',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<CartItemModel, CartItemModel, QAfterFilterCondition>
+      productSizeNameLessThan(
+    String value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.lessThan(
+        include: include,
+        property: r'productSizeName',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<CartItemModel, CartItemModel, QAfterFilterCondition>
+      productSizeNameBetween(
+    String lower,
+    String upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.between(
+        property: r'productSizeName',
+        lower: lower,
+        includeLower: includeLower,
+        upper: upper,
+        includeUpper: includeUpper,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<CartItemModel, CartItemModel, QAfterFilterCondition>
+      productSizeNameStartsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.startsWith(
+        property: r'productSizeName',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<CartItemModel, CartItemModel, QAfterFilterCondition>
+      productSizeNameEndsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.endsWith(
+        property: r'productSizeName',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<CartItemModel, CartItemModel, QAfterFilterCondition>
+      productSizeNameContains(String value, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.contains(
+        property: r'productSizeName',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<CartItemModel, CartItemModel, QAfterFilterCondition>
+      productSizeNameMatches(String pattern, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.matches(
+        property: r'productSizeName',
+        wildcard: pattern,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<CartItemModel, CartItemModel, QAfterFilterCondition>
+      productSizeNameIsEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'productSizeName',
+        value: '',
+      ));
+    });
+  }
+
+  QueryBuilder<CartItemModel, CartItemModel, QAfterFilterCondition>
+      productSizeNameIsNotEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        property: r'productSizeName',
+        value: '',
+      ));
+    });
+  }
+
+  QueryBuilder<CartItemModel, CartItemModel, QAfterFilterCondition>
+      productSizePriceEqualTo(
+    double value, {
+    double epsilon = Query.epsilon,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'productSizePrice',
+        value: value,
+        epsilon: epsilon,
+      ));
+    });
+  }
+
+  QueryBuilder<CartItemModel, CartItemModel, QAfterFilterCondition>
+      productSizePriceGreaterThan(
+    double value, {
+    bool include = false,
+    double epsilon = Query.epsilon,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        include: include,
+        property: r'productSizePrice',
+        value: value,
+        epsilon: epsilon,
+      ));
+    });
+  }
+
+  QueryBuilder<CartItemModel, CartItemModel, QAfterFilterCondition>
+      productSizePriceLessThan(
+    double value, {
+    bool include = false,
+    double epsilon = Query.epsilon,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.lessThan(
+        include: include,
+        property: r'productSizePrice',
+        value: value,
+        epsilon: epsilon,
+      ));
+    });
+  }
+
+  QueryBuilder<CartItemModel, CartItemModel, QAfterFilterCondition>
+      productSizePriceBetween(
+    double lower,
+    double upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+    double epsilon = Query.epsilon,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.between(
+        property: r'productSizePrice',
+        lower: lower,
+        includeLower: includeLower,
+        upper: upper,
+        includeUpper: includeUpper,
+        epsilon: epsilon,
+      ));
+    });
+  }
+
+  QueryBuilder<CartItemModel, CartItemModel, QAfterFilterCondition>
+      productSizeStockQuantityEqualTo(int value) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'productSizeStockQuantity',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<CartItemModel, CartItemModel, QAfterFilterCondition>
+      productSizeStockQuantityGreaterThan(
+    int value, {
+    bool include = false,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        include: include,
+        property: r'productSizeStockQuantity',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<CartItemModel, CartItemModel, QAfterFilterCondition>
+      productSizeStockQuantityLessThan(
+    int value, {
+    bool include = false,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.lessThan(
+        include: include,
+        property: r'productSizeStockQuantity',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<CartItemModel, CartItemModel, QAfterFilterCondition>
+      productSizeStockQuantityBetween(
+    int lower,
+    int upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.between(
+        property: r'productSizeStockQuantity',
+        lower: lower,
+        includeLower: includeLower,
+        upper: upper,
+        includeUpper: includeUpper,
+      ));
+    });
+  }
+
+  QueryBuilder<CartItemModel, CartItemModel, QAfterFilterCondition>
       productStatusEqualTo(bool value) {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(FilterCondition.equalTo(
@@ -2029,6 +2380,62 @@ extension CartItemModelQuerySortBy
   }
 
   QueryBuilder<CartItemModel, CartItemModel, QAfterSortBy>
+      sortByProductSizeId() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'productSizeId', Sort.asc);
+    });
+  }
+
+  QueryBuilder<CartItemModel, CartItemModel, QAfterSortBy>
+      sortByProductSizeIdDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'productSizeId', Sort.desc);
+    });
+  }
+
+  QueryBuilder<CartItemModel, CartItemModel, QAfterSortBy>
+      sortByProductSizeName() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'productSizeName', Sort.asc);
+    });
+  }
+
+  QueryBuilder<CartItemModel, CartItemModel, QAfterSortBy>
+      sortByProductSizeNameDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'productSizeName', Sort.desc);
+    });
+  }
+
+  QueryBuilder<CartItemModel, CartItemModel, QAfterSortBy>
+      sortByProductSizePrice() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'productSizePrice', Sort.asc);
+    });
+  }
+
+  QueryBuilder<CartItemModel, CartItemModel, QAfterSortBy>
+      sortByProductSizePriceDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'productSizePrice', Sort.desc);
+    });
+  }
+
+  QueryBuilder<CartItemModel, CartItemModel, QAfterSortBy>
+      sortByProductSizeStockQuantity() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'productSizeStockQuantity', Sort.asc);
+    });
+  }
+
+  QueryBuilder<CartItemModel, CartItemModel, QAfterSortBy>
+      sortByProductSizeStockQuantityDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'productSizeStockQuantity', Sort.desc);
+    });
+  }
+
+  QueryBuilder<CartItemModel, CartItemModel, QAfterSortBy>
       sortByProductStatus() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'productStatus', Sort.asc);
@@ -2271,6 +2678,62 @@ extension CartItemModelQuerySortThenBy
   }
 
   QueryBuilder<CartItemModel, CartItemModel, QAfterSortBy>
+      thenByProductSizeId() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'productSizeId', Sort.asc);
+    });
+  }
+
+  QueryBuilder<CartItemModel, CartItemModel, QAfterSortBy>
+      thenByProductSizeIdDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'productSizeId', Sort.desc);
+    });
+  }
+
+  QueryBuilder<CartItemModel, CartItemModel, QAfterSortBy>
+      thenByProductSizeName() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'productSizeName', Sort.asc);
+    });
+  }
+
+  QueryBuilder<CartItemModel, CartItemModel, QAfterSortBy>
+      thenByProductSizeNameDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'productSizeName', Sort.desc);
+    });
+  }
+
+  QueryBuilder<CartItemModel, CartItemModel, QAfterSortBy>
+      thenByProductSizePrice() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'productSizePrice', Sort.asc);
+    });
+  }
+
+  QueryBuilder<CartItemModel, CartItemModel, QAfterSortBy>
+      thenByProductSizePriceDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'productSizePrice', Sort.desc);
+    });
+  }
+
+  QueryBuilder<CartItemModel, CartItemModel, QAfterSortBy>
+      thenByProductSizeStockQuantity() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'productSizeStockQuantity', Sort.asc);
+    });
+  }
+
+  QueryBuilder<CartItemModel, CartItemModel, QAfterSortBy>
+      thenByProductSizeStockQuantityDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'productSizeStockQuantity', Sort.desc);
+    });
+  }
+
+  QueryBuilder<CartItemModel, CartItemModel, QAfterSortBy>
       thenByProductStatus() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'productStatus', Sort.asc);
@@ -2417,6 +2880,35 @@ extension CartItemModelQueryWhereDistinct
   }
 
   QueryBuilder<CartItemModel, CartItemModel, QDistinct>
+      distinctByProductSizeId() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'productSizeId');
+    });
+  }
+
+  QueryBuilder<CartItemModel, CartItemModel, QDistinct>
+      distinctByProductSizeName({bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'productSizeName',
+          caseSensitive: caseSensitive);
+    });
+  }
+
+  QueryBuilder<CartItemModel, CartItemModel, QDistinct>
+      distinctByProductSizePrice() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'productSizePrice');
+    });
+  }
+
+  QueryBuilder<CartItemModel, CartItemModel, QDistinct>
+      distinctByProductSizeStockQuantity() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'productSizeStockQuantity');
+    });
+  }
+
+  QueryBuilder<CartItemModel, CartItemModel, QDistinct>
       distinctByProductStatus() {
     return QueryBuilder.apply(this, (query) {
       return query.addDistinctBy(r'productStatus');
@@ -2530,6 +3022,33 @@ extension CartItemModelQueryProperty
       productSalePriceProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'productSalePrice');
+    });
+  }
+
+  QueryBuilder<CartItemModel, int, QQueryOperations> productSizeIdProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'productSizeId');
+    });
+  }
+
+  QueryBuilder<CartItemModel, String, QQueryOperations>
+      productSizeNameProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'productSizeName');
+    });
+  }
+
+  QueryBuilder<CartItemModel, double, QQueryOperations>
+      productSizePriceProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'productSizePrice');
+    });
+  }
+
+  QueryBuilder<CartItemModel, int, QQueryOperations>
+      productSizeStockQuantityProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'productSizeStockQuantity');
     });
   }
 

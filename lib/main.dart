@@ -3,7 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'features/auth/presentation/pages/login_page.dart';
 import 'core/theme/app_theme.dart';
 import 'core/storage/token_storage.dart';
+import 'core/storage/user_storage.dart';
 import 'core/widgets/bottom_nav_bar.dart';
+import 'core/widgets/shipper_bottom_nav_bar.dart';
 
 void main() {
   runApp(const ProviderScope(child: MyApp()));
@@ -33,6 +35,7 @@ class AppInitializer extends StatefulWidget {
 class _AppInitializerState extends State<AppInitializer> {
   bool _isLoading = true;
   bool _isLoggedIn = false;
+  String? _userRole;
 
   @override
   void initState() {
@@ -43,9 +46,14 @@ class _AppInitializerState extends State<AppInitializer> {
   Future<void> _checkLoginStatus() async {
     try {
       final loggedIn = await TokenStorage.isLoggedIn();
+      String? userRole;
+      if (loggedIn) {
+        userRole = await UserStorage.getUserRole();
+      }
       if (mounted) {
         setState(() {
           _isLoggedIn = loggedIn;
+          _userRole = userRole;
           _isLoading = false;
         });
       }
@@ -54,9 +62,19 @@ class _AppInitializerState extends State<AppInitializer> {
       if (mounted) {
         setState(() {
           _isLoggedIn = false;
+          _userRole = null;
           _isLoading = false;
         });
       }
+    }
+  }
+
+  Widget _getHomeWidget() {
+    // Role 1 = Customer, Role 3 = Shipper
+    if (_userRole == '3' || _userRole == 'Shipper') {
+      return const ShipperBottomNavBar();
+    } else {
+      return const BottomNavBar();
     }
   }
 
@@ -66,6 +84,6 @@ class _AppInitializerState extends State<AppInitializer> {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
 
-    return _isLoggedIn ? const BottomNavBar() : const LoginPage();
+    return _isLoggedIn ? _getHomeWidget() : const LoginPage();
   }
 }

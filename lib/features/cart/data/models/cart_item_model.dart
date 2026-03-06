@@ -7,23 +7,29 @@ class CartItemModel {
   Id id = Isar.autoIncrement;
 
   // Product info (lưu trực tiếp vì không có relation với Product entity)
-  late int productId;
-  late String productName;
-  late String productDescription;
-  late double productPrice;
+  int productId = 0;
+  String productName = '';
+  String productDescription = '';
+  double productPrice = 0.0;
   double? productSalePrice;
-  late int productStockQuantity;
-  late int categoryId;
-  late String categoryName;
-  late int brandId;
-  late String brandName;
-  late bool productStatus;
+  int productStockQuantity = 0;
+  int categoryId = 0;
+  String categoryName = '';
+  int brandId = 0;
+  String brandName = '';
+  bool productStatus = true;
   String? productPetType;
-  late String productImageUrl; // Lưu ảnh đầu tiên
+  String productImageUrl = ''; // Lưu ảnh đầu tiên
+
+  // ProductSize info
+  int productSizeId = 0;
+  String productSizeName = ''; // "1kg", "5kg", etc.
+  double productSizePrice = 0.0; // Giá của size đã chọn
+  int productSizeStockQuantity = 0; // Tồn kho của size đã chọn
 
   // Cart item info
-  late int quantity;
-  late DateTime addedAt;
+  int quantity = 1;
+  DateTime addedAt = DateTime.now();
 
   CartItemModel();
 
@@ -41,9 +47,13 @@ class CartItemModel {
     required this.productStatus,
     this.productPetType,
     required this.productImageUrl,
+    required this.productSizeId,
+    required this.productSizeName,
+    required this.productSizePrice,
+    required this.productSizeStockQuantity,
     this.quantity = 1,
   }) : addedAt = DateTime.now();
 
-  double get finalPrice => productSalePrice ?? productPrice;
-  double get totalPrice => finalPrice * quantity;
+  double get finalPrice => productSalePrice ?? productSizePrice; // Dùng giá của size đã chọn
+  double get totalPrice => productSizePrice * quantity; // Dùng giá của size đã chọn
 }
