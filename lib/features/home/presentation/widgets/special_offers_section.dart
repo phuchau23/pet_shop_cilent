@@ -1,10 +1,56 @@
 import 'package:flutter/material.dart';
 import '../../../../core/theme/app_colors.dart';
-import '../../../products/data/mock_data/mock_products.dart';
-import '../../../products/domain/entities/special_offer.dart';
+import '../../../../core/network/api_client.dart';
+import '../../../order/data/datasources/remote/order_remote_data_source.dart';
+import '../../../order/data/models/voucher_response_dto.dart';
 
-class SpecialOffersSection extends StatelessWidget {
+class SpecialOffersSection extends StatefulWidget {
   const SpecialOffersSection({super.key});
+
+  @override
+  State<SpecialOffersSection> createState() => _SpecialOffersSectionState();
+}
+
+class _SpecialOffersSectionState extends State<SpecialOffersSection> {
+  List<VoucherResponseDto> _vouchers = [];
+  bool _isLoading = true;
+  String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadVouchers();
+  }
+
+  Future<void> _loadVouchers() async {
+    try {
+      setState(() {
+        _isLoading = true;
+        _error = null;
+      });
+
+      final dataSource = OrderRemoteDataSourceImpl(apiClient: ApiClient());
+      final vouchers = await dataSource.getVouchers();
+
+      // Chỉ lấy các voucher đang active
+      final activeVouchers = vouchers.where((v) => v.isActive).toList();
+
+      if (mounted) {
+        setState(() {
+          _vouchers = activeVouchers;
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      print('❌ Error loading vouchers: $e');
+      if (mounted) {
+        setState(() {
+          _error = e.toString();
+          _isLoading = false;
+        });
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -18,7 +64,7 @@ class SpecialOffersSection extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 const Text(
-                  'Special Offers',
+                  'Voucher Khuyến Mãi',
                   style: TextStyle(
                     fontSize: 20,
                     fontWeight: FontWeight.bold,
@@ -28,7 +74,7 @@ class SpecialOffersSection extends StatelessWidget {
                 TextButton(
                   onPressed: () {},
                   child: const Text(
-                    'See All',
+                    'Xem tất cả',
                     style: TextStyle(
                       color: AppColors.primary,
                       fontWeight: FontWeight.w600,
@@ -38,17 +84,54 @@ class SpecialOffersSection extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 12),
-            SizedBox(
-              height: 180,
-              child: ListView.builder(
-                scrollDirection: Axis.horizontal,
-                itemCount: MockProducts.specialOffers.length,
-                itemBuilder: (context, index) {
-                  final offer = MockProducts.specialOffers[index];
-                  return SpecialOfferCard(offer: offer);
-                },
-              ),
-            ),
+            _isLoading
+                ? const SizedBox(
+                    height: 200,
+                    child: Center(child: CircularProgressIndicator()),
+                  )
+                : _error != null
+                ? SizedBox(
+                    height: 200,
+                    child: Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const Icon(
+                            Icons.error_outline,
+                            color: Colors.red,
+                            size: 48,
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            'Lỗi: $_error',
+                            style: const TextStyle(color: Colors.red),
+                            textAlign: TextAlign.center,
+                          ),
+                          const SizedBox(height: 8),
+                          ElevatedButton(
+                            onPressed: _loadVouchers,
+                            child: const Text('Thử lại'),
+                          ),
+                        ],
+                      ),
+                    ),
+                  )
+                : _vouchers.isEmpty
+                ? const SizedBox(
+                    height: 200,
+                    child: Center(child: Text('Không có voucher nào')),
+                  )
+                : SizedBox(
+                    height: 95,
+                    child: ListView.builder(
+                      scrollDirection: Axis.horizontal,
+                      itemCount: _vouchers.length,
+                      itemBuilder: (context, index) {
+                        final voucher = _vouchers[index];
+                        return VoucherCard(voucher: voucher);
+                      },
+                    ),
+                  ),
           ],
         ),
       ),
@@ -56,118 +139,149 @@ class SpecialOffersSection extends StatelessWidget {
   }
 }
 
-class SpecialOfferCard extends StatelessWidget {
-  final SpecialOffer offer;
+class VoucherCard extends StatelessWidget {
+  final VoucherResponseDto voucher;
 
-  const SpecialOfferCard({super.key, required this.offer});
+  const VoucherCard({super.key, required this.voucher});
+
+  String _getDiscountText() {
+    if (voucher.discountType == 'percentage') {
+      return '${voucher.discountValue.toInt()}%';
+    } else {
+      return '${(voucher.discountValue / 1000).toStringAsFixed(0)}K';
+    }
+  }
+
+  String _getDiscountLabel() {
+    if (voucher.discountType == 'percentage') {
+      return 'OFF';
+    } else {
+      return 'VNĐ';
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: 320,
-      margin: const EdgeInsets.only(right: 16),
-      decoration: BoxDecoration(
-        color: const Color(0xFFE8F5E9), // Light green
-        borderRadius: BorderRadius.circular(20),
-      ),
+      width: 120,
+      height: 85,
+      margin: const EdgeInsets.only(right: 12),
       child: Stack(
         children: [
-          // Background pattern
-          Positioned.fill(child: CustomPaint(painter: PawPrintPainter())),
-          Padding(
-            padding: const EdgeInsets.all(20),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  offer.title,
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                    color: AppColors.textPrimary,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  '${offer.discountPercent}% Off',
-                  style: const TextStyle(
-                    fontSize: 32,
-                    fontWeight: FontWeight.bold,
-                    color: AppColors.textPrimary,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  offer.timeRange,
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: AppColors.textSecondary,
-                  ),
-                ),
-                const SizedBox(height: 12),
-                ElevatedButton(
-                  onPressed: () {},
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.primary,
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 24,
-                      vertical: 12,
-                    ),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                  ),
-                  child: const Text('Order Now'),
-                ),
-              ],
-            ),
-          ),
-          // Cat image on right
-          Positioned(
-            right: 0,
-            bottom: 0,
+          // Main voucher card with perforated border
+          CustomPaint(
+            painter: PerforatedBorderPainter(),
             child: Container(
-              width: 120,
-              height: 120,
-              decoration: const BoxDecoration(
-                borderRadius: BorderRadius.only(
-                  bottomRight: Radius.circular(20),
-                ),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(8),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.15),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
               ),
               child: ClipRRect(
-                borderRadius: const BorderRadius.only(
-                  bottomRight: Radius.circular(20),
-                ),
-                child: offer.imageUrl != null
-                    ? Image.network(
-                        offer.imageUrl!,
-                        fit: BoxFit.cover,
-                        loadingBuilder: (context, child, loadingProgress) {
-                          if (loadingProgress == null) return child;
-                          return const Center(
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              valueColor: AlwaysStoppedAnimation<Color>(
-                                AppColors.primary,
+                borderRadius: BorderRadius.circular(6),
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: Colors.red.shade700,
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: Stack(
+                    children: [
+                      // DISCOUNT banner at top
+                      Positioned(
+                        top: 0,
+                        left: 0,
+                        right: 0,
+                        child: Container(
+                          height: 20,
+                          decoration: BoxDecoration(
+                            color: Colors.red.shade900,
+                            borderRadius: const BorderRadius.only(
+                              topLeft: Radius.circular(6),
+                              topRight: Radius.circular(6),
+                            ),
+                          ),
+                          child: const Center(
+                            child: Text(
+                              'DISCOUNT',
+                              style: TextStyle(
+                                fontSize: 10,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.white,
+                                letterSpacing: 0.5,
                               ),
                             ),
-                          );
-                        },
-                        errorBuilder: (context, error, stackTrace) {
-                          return const Icon(
-                            Icons.pets,
-                            size: 60,
-                            color: AppColors.primary,
-                          );
-                        },
-                      )
-                    : const Icon(
-                        Icons.pets,
-                        size: 60,
-                        color: AppColors.primary,
+                          ),
+                        ),
                       ),
+                      // Circle with percentage
+                      Center(
+                        child: Container(
+                          width: 65,
+                          height: 65,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            border: Border.all(color: Colors.white, width: 2),
+                            color: Colors.transparent,
+                          ),
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Text(
+                                _getDiscountText(),
+                                style: const TextStyle(
+                                  fontSize: 22,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.white,
+                                  height: 1,
+                                ),
+                              ),
+                              const Text(
+                                'OFF',
+                                style: TextStyle(
+                                  fontSize: 9,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.white,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                      // Semi-circular cutout on left
+                      Positioned(
+                        left: -8,
+                        top: 0,
+                        bottom: 0,
+                        child: Container(
+                          width: 16,
+                          decoration: BoxDecoration(
+                            color: Colors.grey.shade200,
+                            shape: BoxShape.circle,
+                          ),
+                        ),
+                      ),
+                      // Semi-circular cutout on right
+                      Positioned(
+                        right: -8,
+                        top: 0,
+                        bottom: 0,
+                        child: Container(
+                          width: 16,
+                          decoration: BoxDecoration(
+                            color: Colors.grey.shade200,
+                            shape: BoxShape.circle,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
               ),
             ),
           ),
@@ -177,46 +291,109 @@ class SpecialOfferCard extends StatelessWidget {
   }
 }
 
-class PawPrintPainter extends CustomPainter {
+// Custom painter for perforated border
+class PerforatedBorderPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final paint = Paint()
-      ..color = Colors.grey.shade300.withOpacity(0.3)
+      ..color = Colors.white
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 2;
+
+    final dashWidth = 3.0;
+    final dashSpace = 2.0;
+    final radius = 8.0;
+
+    // Top border with dashes
+    _drawDashedLine(
+      canvas,
+      Offset(radius, 0),
+      Offset(size.width - radius, 0),
+      paint,
+      dashWidth,
+      dashSpace,
+    );
+
+    // Bottom border with dashes
+    _drawDashedLine(
+      canvas,
+      Offset(radius, size.height),
+      Offset(size.width - radius, size.height),
+      paint,
+      dashWidth,
+      dashSpace,
+    );
+
+    // Left border with dashes and semi-circle cutout
+    _drawDashedLine(
+      canvas,
+      Offset(0, radius),
+      Offset(0, size.height / 2 - 6),
+      paint,
+      dashWidth,
+      dashSpace,
+    );
+    _drawDashedLine(
+      canvas,
+      Offset(0, size.height / 2 + 6),
+      Offset(0, size.height - radius),
+      paint,
+      dashWidth,
+      dashSpace,
+    );
+
+    // Right border with dashes and semi-circle cutout
+    _drawDashedLine(
+      canvas,
+      Offset(size.width, radius),
+      Offset(size.width, size.height / 2 - 6),
+      paint,
+      dashWidth,
+      dashSpace,
+    );
+    _drawDashedLine(
+      canvas,
+      Offset(size.width, size.height / 2 + 6),
+      Offset(size.width, size.height - radius),
+      paint,
+      dashWidth,
+      dashSpace,
+    );
+
+    // Semi-circular cutout on left side
+    final cutoutPaint = Paint()
+      ..color = Colors.grey.shade200
       ..style = PaintingStyle.fill;
+    canvas.drawCircle(Offset(0, size.height / 2), 6, cutoutPaint);
 
-    // Draw paw prints
-    final pawSize = 20.0;
-    final positions = [
-      Offset(size.width * 0.7, size.height * 0.3),
-      Offset(size.width * 0.85, size.height * 0.4),
-      Offset(size.width * 0.6, size.height * 0.5),
-    ];
+    // Semi-circular cutout on right side
+    canvas.drawCircle(Offset(size.width, size.height / 2), 6, cutoutPaint);
+  }
 
-    for (final pos in positions) {
-      // Main pad
-      canvas.drawCircle(pos, pawSize, paint);
-      // Toes
-      canvas.drawCircle(
-        Offset(pos.dx - pawSize * 0.5, pos.dy - pawSize * 0.8),
-        pawSize * 0.4,
-        paint,
-      );
-      canvas.drawCircle(
-        Offset(pos.dx + pawSize * 0.5, pos.dy - pawSize * 0.8),
-        pawSize * 0.4,
-        paint,
-      );
-      canvas.drawCircle(
-        Offset(pos.dx - pawSize * 0.3, pos.dy + pawSize * 0.5),
-        pawSize * 0.35,
-        paint,
-      );
-      canvas.drawCircle(
-        Offset(pos.dx + pawSize * 0.3, pos.dy + pawSize * 0.5),
-        pawSize * 0.35,
-        paint,
-      );
+  void _drawDashedLine(
+    Canvas canvas,
+    Offset start,
+    Offset end,
+    Paint paint,
+    double dashWidth,
+    double dashSpace,
+  ) {
+    final path = Path();
+    final distance = (end - start).distance;
+    final direction = (end - start) / distance;
+    var currentDistance = 0.0;
+
+    while (currentDistance < distance) {
+      final dashStart = start + direction * currentDistance;
+      final dashEnd =
+          start +
+          direction * (currentDistance + dashWidth).clamp(0.0, distance);
+      path.moveTo(dashStart.dx, dashStart.dy);
+      path.lineTo(dashEnd.dx, dashEnd.dy);
+      currentDistance += dashWidth + dashSpace;
     }
+
+    canvas.drawPath(path, paint);
   }
 
   @override

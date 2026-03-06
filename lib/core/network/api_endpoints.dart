@@ -16,6 +16,9 @@ class ApiEndpoints {
   static const String getProfile = '/user/profile';
   static const String updateProfile = '/user/profile';
   static const String changePassword = '/user/change-password';
+  
+  // Auth endpoints - Profile
+  static const String getAuthProfile = '/auth/profile'; // ⭐ API mới - lấy từ token
 
   // Category endpoints
   static const String getCategories = '/categories';
@@ -36,10 +39,28 @@ class ApiEndpoints {
 
   // Order endpoints (ví dụ)
   static const String getOrders = '/orders';
+  static const String getMyOrders = '/orders/my-orders'; // ⭐ API mới - lấy từ token
   static const String getOrderById = '/orders'; // /orders/{id}
   static const String createOrder = '/orders';
   static const String updateOrder = '/orders'; // /orders/{id}
   static const String cancelOrder = '/orders'; // /orders/{id}/cancel
+  static const String estimateDelivery = '/orders/estimate-delivery';
+  static const String orderTracking = '/orders'; // /orders/{id}/tracking
+
+  // Voucher endpoints
+  static const String getVouchers = '/vouchers';
+  static const String validateVoucher = '/vouchers/validate';
+
+  // Location endpoints
+  static const String getProvinces = '/locations/provinces';
+  static const String getDistricts = '/locations/districts';
+  static const String getWards = '/locations/wards';
+
+  // Shipper endpoints
+  static const String getShipperOrders = '/orders/shipper/my-orders';
+  static const String getAvailableOrders = '/orders/shipper/available';
+  static const String updateShipperStatus = '/orders'; // /orders/{id}/shipper-status
+  static const String updateShipperLocation = '/orders'; // /orders/{id}/shipper-location
 
   // Helper method để build URL với path parameters
   static String buildUrl(String endpoint, {Map<String, dynamic>? pathParams}) {

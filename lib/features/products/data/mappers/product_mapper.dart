@@ -1,5 +1,6 @@
 import '../models/product_response_dto.dart';
 import '../../domain/entities/product.dart';
+import '../../domain/entities/product_size.dart';
 import '../../domain/entities/category.dart';
 import '../../domain/entities/brand.dart';
 
@@ -9,9 +10,9 @@ class ProductMapper {
       productId: dto.productId,
       name: dto.name,
       description: dto.description,
-      price: dto.price,
+      price: dto.price, // Giá rẻ nhất từ API
       salePrice: null, // API không trả về salePrice
-      stockQuantity: dto.stockQuantity,
+      stockQuantity: dto.stockQuantity, // Tổng tồn kho từ API
       category: Category(
         categoryId: dto.categoryId,
         name: dto.categoryName,
@@ -33,7 +34,13 @@ class ProductMapper {
       createdAt: DateTime.parse(dto.createdAt),
       updatedAt: DateTime.parse(dto.updatedAt),
       images: dto.images.map((img) => img.imageUrl).toList(),
-      availableSizes: dto.availableSizes,
+      productSizes: dto.productSizes.map((psDto) => ProductSize(
+        productSizeId: psDto.productSizeId,
+        size: psDto.size,
+        price: psDto.price,
+        stockQuantity: psDto.stockQuantity,
+        isActive: psDto.isActive,
+      )).toList(),
     );
   }
 

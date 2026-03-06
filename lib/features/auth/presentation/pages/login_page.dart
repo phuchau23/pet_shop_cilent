@@ -11,6 +11,7 @@ import '../../../../core/network/api_client.dart';
 import '../../../../core/storage/token_storage.dart';
 import '../../../../core/storage/user_storage.dart';
 import '../../../../core/widgets/bottom_nav_bar.dart';
+import '../../../../core/widgets/shipper_bottom_nav_bar.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -63,27 +64,69 @@ class _LoginPageState extends State<LoginPage> {
   }
 
   Future<void> _handleLogin() async {
-    if (!_formKey.currentState!.validate()) {
-      return;
-    }
+    if (_formKey.currentState!.validate()) {
+      setState(() {
+        _isLoading = true;
+        _errorMessage = null;
+      });
 
-    setState(() {
-      _isLoading = true;
-      _errorMessage = null;
-    });
+      try {
+        final email = _emailController.text.trim();
+        final password = _passwordController.text;
 
-    try {
-      final email = _emailController.text.trim();
-      final password = _passwordController.text;
+        print('🔐 Attempting login for: $email');
+        final authResponse = await _loginUseCase(email, password);
+        print('✅ Login successful!');
 
-      print('Attempting login for: $email');
-      final authResponse = await _loginUseCase(email, password);
-      print('Login successful!');
-      await _handleLoginSuccess(authResponse);
-    } catch (error) {
-      _handleLoginError(error);
-    } finally {
-      if (mounted) {
+        // Lưu token vào storage
+        await TokenStorage.saveToken(
+          token: authResponse.token,
+          refreshToken: authResponse.refreshToken,
+          expiresAt: authResponse.expiresAt,
+        );
+        print('💾 Token saved to storage');
+
+        // Lưu thông tin user
+        await UserStorage.saveUser(
+          userId: authResponse.user.userId,
+          email: authResponse.user.email,
+          fullName: authResponse.user.fullName,
+          userRole: authResponse.user.userRole,
+        );
+        print('💾 User info saved');
+
+        // Navigate to home page
+        if (mounted) {
+          print('🚀 Navigating to BottomNavBar...');
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                'Đăng nhập thành công! Xin chào ${authResponse.user.fullName}',
+              ),
+              backgroundColor: Colors.green,
+            ),
+          );
+
+          // Delay nhỏ để đảm bảo token đã được lưu
+          await Future.delayed(const Duration(milliseconds: 100));
+
+          if (mounted) {
+            // Route theo role: 1 = Customer, 3 = Shipper
+            final userRole = authResponse.user.userRole;
+            final homeWidget = (userRole == '3' || userRole == 'Shipper')
+                ? const ShipperBottomNavBar()
+                : const BottomNavBar();
+
+            Navigator.of(context).pushAndRemoveUntil(
+              MaterialPageRoute(builder: (context) => homeWidget),
+              (route) => false,
+            );
+            print('✅ Navigation completed for role: $userRole');
+          }
+        }
+      } catch (e) {
+        print('❌ Login error: $e');
+        final errorMsg = e.toString().replaceAll('Exception: ', '');
         setState(() {
           _isLoading = false;
         });

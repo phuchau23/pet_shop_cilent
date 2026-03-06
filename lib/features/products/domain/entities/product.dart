@@ -1,13 +1,14 @@
 import 'category.dart';
 import 'brand.dart';
+import 'product_size.dart';
 
 class Product {
   final int productId;
   final String name;
   final String description;
-  final double price;
+  final double price; // Giá rẻ nhất từ productSizes (từ API)
   final double? salePrice;
-  final int stockQuantity;
+  final int stockQuantity; // Tổng tồn kho từ productSizes (từ API)
   final Category category;
   final Brand brand;
   final bool status;
@@ -18,7 +19,7 @@ class Product {
   final DateTime createdAt;
   final DateTime updatedAt;
   final List<String> images;
-  final List<String> availableSizes;
+  final List<ProductSize> productSizes; // Thay thế availableSizes
 
   Product({
     required this.productId,
@@ -37,7 +38,7 @@ class Product {
     required this.createdAt,
     required this.updatedAt,
     required this.images,
-    required this.availableSizes,
+    required this.productSizes,
   });
 
   bool get isOnSale => salePrice != null && salePrice! < price;
@@ -45,5 +46,24 @@ class Product {
   double get discountPercent {
     if (!isOnSale) return 0;
     return ((price - salePrice!) / price * 100).round().toDouble();
+  }
+
+  // Helper methods
+  List<String> get availableSizes => productSizes.map((ps) => ps.size).toList();
+  
+  ProductSize? getSizeBySizeName(String sizeName) {
+    try {
+      return productSizes.firstWhere((ps) => ps.size == sizeName);
+    } catch (e) {
+      return null;
+    }
+  }
+
+  ProductSize? getSizeById(int productSizeId) {
+    try {
+      return productSizes.firstWhere((ps) => ps.productSizeId == productSizeId);
+    } catch (e) {
+      return null;
+    }
   }
 }

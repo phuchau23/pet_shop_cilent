@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../domain/entities/product.dart';
+import '../../domain/entities/product_size.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/storage/user_storage.dart';
 import '../../../cart/presentation/providers/cart_provider.dart';
@@ -19,7 +20,7 @@ class _ProductDetailPageState extends ConsumerState<ProductDetailPage> {
   int _quantity = 1;
   int _selectedImageIndex = 0;
   bool _isAddingToCart = false;
-  String? _selectedSize;
+  ProductSize? _selectedSize;
 
   String _formatPrice(double price) {
     final priceInt = price.toInt();
@@ -38,10 +39,22 @@ class _ProductDetailPageState extends ConsumerState<ProductDetailPage> {
   @override
   void initState() {
     super.initState();
-    // Set default selected size if available
-    if (widget.product.availableSizes.isNotEmpty) {
-      _selectedSize = widget.product.availableSizes.first;
+    // Set default selected size if available (chọn size đầu tiên có sẵn)
+    if (widget.product.productSizes.isNotEmpty) {
+      final firstAvailableSize = widget.product.productSizes.firstWhere(
+        (ps) => ps.isActive && ps.isInStock,
+        orElse: () => widget.product.productSizes.first,
+      );
+      _selectedSize = firstAvailableSize;
     }
+  }
+
+  // Get current price based on selected size
+  double get _currentPrice {
+    if (_selectedSize != null) {
+      return _selectedSize!.price;
+    }
+    return widget.product.price; // Fallback to product's base price
   }
 
   @override
@@ -378,25 +391,26 @@ class _ProductDetailPageState extends ConsumerState<ProductDetailPage> {
                         ),
                         const SizedBox(height: 16),
                         Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            if (product.isOnSale)
-                              Text(
-                                _formatPrice(product.price),
-                                style: const TextStyle(
-                                  fontSize: 18,
-                                  color: AppColors.textLight,
-                                  decoration: TextDecoration.lineThrough,
-                                ),
-                              ),
-                            if (product.isOnSale) const SizedBox(width: 12),
                             Text(
-                              _formatPrice(product.finalPrice),
+                              _formatPrice(_currentPrice),
                               style: const TextStyle(
                                 fontSize: 28,
                                 fontWeight: FontWeight.bold,
                                 color: AppColors.primary,
                               ),
                             ),
+                            if (_selectedSize != null)
+                              Text(
+                                _selectedSize!.isInStock
+                                    ? 'Tồn kho: ${_selectedSize!.stockQuantity}'
+                                    : 'Tồn kho: 0',
+                                style: const TextStyle(
+                                  fontSize: 14,
+                                  color: AppColors.textSecondary,
+                                ),
+                              ),
                           ],
                         ),
                         const SizedBox(height: 16),
@@ -427,7 +441,7 @@ class _ProductDetailPageState extends ConsumerState<ProductDetailPage> {
                           ],
                         ),
                         // Size selector
-                        if (product.availableSizes.isNotEmpty) ...[
+                        if (product.productSizes.isNotEmpty) ...[
                           const SizedBox(height: 24),
                           const Text(
                             'Select Size:',
@@ -441,44 +455,59 @@ class _ProductDetailPageState extends ConsumerState<ProductDetailPage> {
                           Wrap(
                             spacing: 12,
                             runSpacing: 12,
-                            children: product.availableSizes.map((size) {
-                              final isSelected = _selectedSize == size;
-                              return GestureDetector(
-                                onTap: () {
-                                  setState(() {
-                                    _selectedSize = size;
-                                  });
-                                },
-                                child: Container(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 20,
-                                    vertical: 12,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    color: isSelected
-                                        ? AppColors.primary
-                                        : Colors.white,
-                                    border: Border.all(
-                                      color: isSelected
-                                          ? AppColors.primary
-                                          : AppColors.textLight,
-                                      width: isSelected ? 2 : 1,
+                            children: product.productSizes
+                                .where((ps) => ps.isActive)
+                                .map((productSize) {
+                                  final isSelected =
+                                      _selectedSize?.productSizeId ==
+                                      productSize.productSizeId;
+                                  final isOutOfStock = !productSize.isInStock;
+                                  return GestureDetector(
+                                    onTap: isOutOfStock
+                                        ? null
+                                        : () {
+                                            setState(() {
+                                              _selectedSize = productSize;
+                                            });
+                                          },
+                                    child: Container(
+                                      width: 60,
+                                      height: 60,
+                                      decoration: BoxDecoration(
+                                        color: isSelected
+                                            ? AppColors.primary
+                                            : (isOutOfStock
+                                                  ? AppColors.primaryVeryLight
+                                                  : Colors.white),
+                                        border: Border.all(
+                                          color: isSelected
+                                              ? AppColors.primary
+                                              : (isOutOfStock
+                                                    ? AppColors.textLight
+                                                          .withOpacity(0.3)
+                                                    : AppColors.textLight),
+                                          width: isSelected ? 2 : 1,
+                                        ),
+                                        borderRadius: BorderRadius.circular(12),
+                                      ),
+                                      child: Center(
+                                        child: Text(
+                                          productSize.size,
+                                          style: TextStyle(
+                                            fontSize: 14,
+                                            fontWeight: FontWeight.w600,
+                                            color: isSelected
+                                                ? Colors.white
+                                                : (isOutOfStock
+                                                      ? AppColors.textLight
+                                                      : AppColors.textPrimary),
+                                          ),
+                                        ),
+                                      ),
                                     ),
-                                    borderRadius: BorderRadius.circular(12),
-                                  ),
-                                  child: Text(
-                                    size,
-                                    style: TextStyle(
-                                      fontSize: 14,
-                                      fontWeight: FontWeight.w600,
-                                      color: isSelected
-                                          ? Colors.white
-                                          : AppColors.textPrimary,
-                                    ),
-                                  ),
-                                ),
-                              );
-                            }).toList(),
+                                  );
+                                })
+                                .toList(),
                           ),
                         ],
                       ],
@@ -585,7 +614,9 @@ class _ProductDetailPageState extends ConsumerState<ProductDetailPage> {
                     ),
                     IconButton(
                       icon: const Icon(Icons.add, size: 20),
-                      onPressed: _quantity < product.stockQuantity
+                      onPressed:
+                          _selectedSize != null &&
+                              _quantity < _selectedSize!.stockQuantity
                           ? () {
                               setState(() {
                                 _quantity++;
@@ -603,6 +634,30 @@ class _ProductDetailPageState extends ConsumerState<ProductDetailPage> {
                   onPressed: _isAddingToCart
                       ? null
                       : () async {
+                          // Validate size đã được chọn
+                          if (_selectedSize == null) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('Vui lòng chọn size'),
+                                backgroundColor: AppColors.error,
+                              ),
+                            );
+                            return;
+                          }
+
+                          // Validate quantity không vượt quá stock
+                          if (_quantity > _selectedSize!.stockQuantity) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text(
+                                  'Số lượng vượt quá tồn kho (Còn ${_selectedSize!.stockQuantity})',
+                                ),
+                                backgroundColor: AppColors.error,
+                              ),
+                            );
+                            return;
+                          }
+
                           final userId = await UserStorage.getUserId();
                           if (userId == null) {
                             ScaffoldMessenger.of(context).showSnackBar(
@@ -628,6 +683,7 @@ class _ProductDetailPageState extends ConsumerState<ProductDetailPage> {
 
                             await cartNotifier.addToCart(
                               widget.product,
+                              _selectedSize!,
                               _quantity,
                             );
                             await countNotifier.refresh();
