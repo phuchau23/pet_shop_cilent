@@ -28,7 +28,7 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
       if (oldToken != null) {
         print('⚠️ Found old token in storage (will be ignored for login)');
       }
-      
+
       final fullUrl = '${ApiClient.baseUrl}${ApiEndpoints.login}';
       print('📤 Sending login request to: $fullUrl');
       print('📤 Request data: ${request.toJson()}');
@@ -95,34 +95,35 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
     }
   }
 
-      if (e.response != null) {
-        final errorData = e.response!.data;
-        print('❌ Error response data type: ${errorData.runtimeType}');
-        print('❌ Error response data: $errorData');
-        
-        if (errorData is Map<String, dynamic>) {
-          // Thử parse theo format ApiResponse
-          try {
-            final apiResponse = ApiResponse<dynamic>.fromJson(
-              errorData,
-              (data) => data,
-            );
-            throw Exception(apiResponse.message.isNotEmpty 
-                ? apiResponse.message 
-                : 'Đăng nhập thất bại');
-          } catch (parseError) {
-            // Nếu không parse được ApiResponse, thử lấy message trực tiếp
-            final message = errorData['message'] ?? 
-                           errorData['title'] ?? 
-                           errorData['detail'] ??
-                           'Đăng nhập thất bại';
-            throw Exception(message.toString());
-          }
-        } else if (errorData is String) {
-          throw Exception(errorData);
-        } else {
-          throw Exception('Đăng nhập thất bại: ${e.response?.statusCode}');
+  Never _handleDioError(DioException e) {
+    if (e.response != null) {
+      final errorData = e.response!.data;
+      print('❌ Error response data type: ${errorData.runtimeType}');
+      print('❌ Error response data: $errorData');
+
+      if (errorData is Map<String, dynamic>) {
+        // Thử parse theo format ApiResponse
+        try {
+          final apiResponse = ApiResponse<dynamic>.fromJson(
+            errorData,
+            (data) => data,
+          );
+          throw Exception(
+            apiResponse.message.isNotEmpty
+                ? apiResponse.message
+                : 'Đăng nhập thất bại',
+          );
+        } catch (parseError) {
+          // Nếu không parse được ApiResponse, thử lấy message trực tiếp
+          final message =
+              errorData['message'] ??
+              errorData['title'] ??
+              errorData['detail'] ??
+              'Đăng nhập thất bại';
+          throw Exception(message.toString());
         }
+      } else if (errorData is String) {
+        throw Exception(errorData);
       } else {
         throw Exception('Đăng nhập thất bại: ${e.response?.statusCode}');
       }
@@ -134,11 +135,11 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
   @override
   Future<ProfileResponseDto> getProfile() async {
     try {
-      print('📤 Getting profile: ${ApiClient.baseUrl}${ApiEndpoints.getAuthProfile}');
-
-      final response = await apiClient.dio.get(
-        ApiEndpoints.getAuthProfile,
+      print(
+        '📤 Getting profile: ${ApiClient.baseUrl}${ApiEndpoints.getAuthProfile}',
       );
+
+      final response = await apiClient.dio.get(ApiEndpoints.getAuthProfile);
 
       print('📥 Get profile response status: ${response.statusCode}');
 
@@ -168,7 +169,9 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
       }
 
       if (e.type == DioExceptionType.connectionError) {
-        throw Exception('Không thể kết nối đến server. Vui lòng kiểm tra kết nối mạng.');
+        throw Exception(
+          'Không thể kết nối đến server. Vui lòng kiểm tra kết nối mạng.',
+        );
       }
 
       if (e.response != null) {
@@ -188,9 +191,7 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
     try {
       print('📤 Logging out: ${ApiClient.baseUrl}${ApiEndpoints.logout}');
 
-      final response = await apiClient.dio.post(
-        ApiEndpoints.logout,
-      );
+      final response = await apiClient.dio.post(ApiEndpoints.logout);
 
       print('📥 Logout response status: ${response.statusCode}');
       print('✅ Logout successful');
