@@ -18,27 +18,23 @@ class _BottomNavBarState extends State<BottomNavBar> {
   @override
   void initState() {
     super.initState();
-    print('🏠 Initializing BottomNavBar...');
     _pages = [
       const HomePage(),
       const _SearchPage(),
       const _LocationPage(),
       const ProfilePage(),
     ];
-    print('✅ Pages initialized');
   }
 
   @override
   Widget build(BuildContext context) {
-    print('🏠 Building BottomNavBar, current index: $_currentIndex');
     return Scaffold(
       body: Builder(
         builder: (context) {
           try {
             return IndexedStack(index: _currentIndex, children: _pages);
-          } catch (e, stackTrace) {
+          } catch (e) {
             print('❌ Error building page: $e');
-            print('❌ Stack trace: $stackTrace');
             return const Center(
               child: Text('Error loading page. Please try again.'),
             );
@@ -48,39 +44,48 @@ class _BottomNavBarState extends State<BottomNavBar> {
       bottomNavigationBar: Container(
         decoration: BoxDecoration(
           color: Colors.white,
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.05),
-              blurRadius: 10,
-              offset: const Offset(0, -2),
+          border: Border(
+            top: BorderSide(
+              color: AppColors.textLight.withOpacity(0.12),
+              width: 1,
             ),
-          ],
+          ),
         ),
         child: SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+          child: Container(
+            height: 70,
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceAround,
+              crossAxisAlignment: CrossAxisAlignment.center,
               children: [
-                _buildNavItem(
-                  icon: Icons.home_rounded,
-                  label: 'Home',
-                  index: 0,
+                _NavItem(
+                  icon: Icons.home_outlined,
+                  selectedIcon: Icons.home_rounded,
+                  label: 'Trang chủ',
+                  isSelected: _currentIndex == 0,
+                  onTap: () => _onItemTapped(0),
                 ),
-                _buildNavItem(
-                  icon: Icons.search_rounded,
-                  label: 'Search',
-                  index: 1,
+                _NavItem(
+                  icon: Icons.search_outlined,
+                  selectedIcon: Icons.search_rounded,
+                  label: 'Tìm kiếm',
+                  isSelected: _currentIndex == 1,
+                  onTap: () => _onItemTapped(1),
                 ),
-                _buildNavItem(
-                  icon: Icons.location_on_rounded,
-                  label: 'Location',
-                  index: 2,
+                _NavItem(
+                  icon: Icons.location_on_outlined,
+                  selectedIcon: Icons.location_on_rounded,
+                  label: 'Vị trí',
+                  isSelected: _currentIndex == 2,
+                  onTap: () => _onItemTapped(2),
                 ),
-                _buildNavItem(
-                  icon: Icons.person_rounded,
-                  label: 'Profile',
-                  index: 3,
+                _NavItem(
+                  icon: Icons.person_outline_rounded,
+                  selectedIcon: Icons.person_rounded,
+                  label: 'Cá nhân',
+                  isSelected: _currentIndex == 3,
+                  onTap: () => _onItemTapped(3),
                 ),
               ],
             ),
@@ -90,42 +95,74 @@ class _BottomNavBarState extends State<BottomNavBar> {
     );
   }
 
-  Widget _buildNavItem({
-    required IconData icon,
-    required String label,
-    required int index,
-  }) {
-    final isSelected = _currentIndex == index;
-    return GestureDetector(
-      onTap: () {
-        setState(() {
-          _currentIndex = index;
-        });
-      },
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        decoration: BoxDecoration(
-          color: isSelected ? AppColors.primaryVeryLight : Colors.transparent,
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              icon,
-              color: isSelected ? AppColors.primary : AppColors.textLight,
-              size: 24,
-            ),
-            const SizedBox(height: 4),
-            Text(
-              label,
-              style: TextStyle(
-                fontSize: 12,
-                fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
-                color: isSelected ? AppColors.primary : AppColors.textLight,
+  void _onItemTapped(int index) {
+    setState(() {
+      _currentIndex = index;
+    });
+  }
+}
+
+class _NavItem extends StatelessWidget {
+  final IconData icon;
+  final IconData selectedIcon;
+  final String label;
+  final bool isSelected;
+  final VoidCallback onTap;
+
+  const _NavItem({
+    required this.icon,
+    required this.selectedIcon,
+    required this.label,
+    required this.isSelected,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Expanded(
+      child: GestureDetector(
+        onTap: onTap,
+        behavior: HitTestBehavior.opaque,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          curve: Curves.easeInOut,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              AnimatedSwitcher(
+                duration: const Duration(milliseconds: 200),
+                transitionBuilder: (child, animation) {
+                  return ScaleTransition(
+                    scale: animation,
+                    child: child,
+                  );
+                },
+                child: Icon(
+                  isSelected ? selectedIcon : icon,
+                  key: ValueKey(isSelected),
+                  color: isSelected ? AppColors.primary : AppColors.textLight,
+                  size: 26,
+                ),
               ),
-            ),
-          ],
+              const SizedBox(height: 4),
+              AnimatedDefaultTextStyle(
+                duration: const Duration(milliseconds: 200),
+                style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
+                  color: isSelected ? AppColors.primary : AppColors.textLight,
+                  height: 1.2,
+                  letterSpacing: 0.1,
+                ),
+                child: Text(
+                  label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -155,4 +192,3 @@ class _LocationPage extends StatelessWidget {
     );
   }
 }
-

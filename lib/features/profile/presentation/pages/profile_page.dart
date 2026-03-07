@@ -56,7 +56,6 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
 
   Future<void> _loadProfileFromAPI() async {
     try {
-      // Hiển thị loading dialog
       if (!mounted) return;
       showDialog(
         context: context,
@@ -67,25 +66,15 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
       final authDataSource = AuthRemoteDataSourceImpl(apiClient: ApiClient());
       final profile = await authDataSource.getProfile();
 
-      // Đóng loading dialog
       if (mounted) {
         Navigator.of(context).pop();
-      }
-
-      // Hiển thị dialog với thông tin profile
-      if (mounted) {
         _showProfileDialog(profile);
       }
     } catch (e) {
       print('❌ Error loading profile from API: $e');
 
-      // Đóng loading dialog nếu còn mở
       if (mounted) {
         Navigator.of(context).pop();
-      }
-
-      // Hiển thị lỗi
-      if (mounted) {
         String errorMessage = 'Không thể tải thông tin profile.';
         if (e.toString().contains('401') ||
             e.toString().contains('Unauthorized')) {
@@ -156,15 +145,16 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
           child: Text(
             '$label:',
             style: const TextStyle(
-              fontWeight: FontWeight.bold,
+              fontWeight: FontWeight.w600,
               color: AppColors.textSecondary,
+              fontSize: 14,
             ),
           ),
         ),
         Expanded(
           child: Text(
             value,
-            style: const TextStyle(color: AppColors.textPrimary),
+            style: const TextStyle(color: AppColors.textPrimary, fontSize: 14),
           ),
         ),
       ],
@@ -174,7 +164,21 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Tài Khoản')),
+      backgroundColor: AppColors.background,
+      appBar: AppBar(
+        title: const Text(
+          'Tài Khoản',
+          style: TextStyle(
+            fontSize: 20,
+            fontWeight: FontWeight.w600,
+            letterSpacing: -0.3,
+          ),
+        ),
+        backgroundColor: AppColors.surface,
+        elevation: 0,
+        scrolledUnderElevation: 0,
+        surfaceTintColor: AppColors.surface,
+      ),
       body: _isLoadingFromStorage
           ? const Center(child: CircularProgressIndicator())
           : RefreshIndicator(
@@ -183,204 +187,256 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                 physics: const AlwaysScrollableScrollPhysics(),
                 child: Column(
                   children: [
-                    // Profile Header
+                    // Profile Header - merged with AppBar background
                     Container(
-                      padding: const EdgeInsets.all(24),
+                      padding: const EdgeInsets.fromLTRB(20, 24, 20, 40),
                       decoration: const BoxDecoration(
-                        gradient: LinearGradient(
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                          colors: [AppColors.primaryVeryLight, Colors.white],
-                        ),
+                        color: AppColors.surface,
                       ),
                       child: Column(
                         children: [
+                          // Avatar with subtle background
                           Container(
                             width: 100,
                             height: 100,
                             decoration: BoxDecoration(
                               color: AppColors.primary,
                               shape: BoxShape.circle,
-                              border: Border.all(color: Colors.white, width: 4),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: AppColors.primary.withOpacity(0.2),
+                                  blurRadius: 12,
+                                  offset: const Offset(0, 4),
+                                ),
+                              ],
                             ),
                             child: const Icon(
-                              Icons.person,
+                              Icons.person_rounded,
                               size: 50,
                               color: Colors.white,
                             ),
                           ),
-                          const SizedBox(height: 16),
+                          const SizedBox(height: 20),
+                          // Name
                           Text(
                             _userName ?? _userEmail ?? 'Người dùng',
                             style: const TextStyle(
                               fontSize: 24,
-                              fontWeight: FontWeight.bold,
+                              fontWeight: FontWeight.w600,
                               color: AppColors.textPrimary,
+                              letterSpacing: -0.4,
+                              height: 1.2,
                             ),
+                            textAlign: TextAlign.center,
                           ),
-                          const SizedBox(height: 4),
-                          Text(
-                            _userEmail ?? '',
-                            style: const TextStyle(
-                              fontSize: 14,
-                              color: AppColors.textSecondary,
-                            ),
-                          ),
-                          if (_userPhone != null) ...[
+                          // Email
+                          if (_userEmail != null) ...[
                             const SizedBox(height: 8),
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                const Icon(
-                                  Icons.phone,
-                                  size: 16,
-                                  color: AppColors.textSecondary,
-                                ),
-                                const SizedBox(width: 4),
-                                Text(
-                                  _userPhone!,
-                                  style: const TextStyle(
-                                    fontSize: 14,
-                                    color: AppColors.textSecondary,
+                            Text(
+                              _userEmail!,
+                              style: const TextStyle(
+                                fontSize: 15,
+                                color: AppColors.textSecondary,
+                                height: 1.3,
+                                letterSpacing: 0.1,
+                              ),
+                              textAlign: TextAlign.center,
+                            ),
+                          ],
+                          // Phone
+                          if (_userPhone != null && _userPhone!.isNotEmpty) ...[
+                            const SizedBox(height: 12),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 16,
+                                vertical: 8,
+                              ),
+                              decoration: BoxDecoration(
+                                color: AppColors.primaryVeryLight,
+                                borderRadius: BorderRadius.circular(20),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(
+                                    Icons.phone_outlined,
+                                    size: 16,
+                                    color: AppColors.primary,
                                   ),
-                                ),
-                              ],
+                                  const SizedBox(width: 6),
+                                  Text(
+                                    _userPhone!,
+                                    style: TextStyle(
+                                      fontSize: 14,
+                                      color: AppColors.primaryDark,
+                                      fontWeight: FontWeight.w500,
+                                      height: 1.2,
+                                    ),
+                                  ),
+                                ],
+                              ),
                             ),
                           ],
                         ],
                       ),
                     ),
 
-                    // Menu Items
+                    // Menu Sections
                     Padding(
-                      padding: const EdgeInsets.all(16),
+                      padding: const EdgeInsets.fromLTRB(20, 20, 20, 32),
                       child: Column(
                         children: [
-                          _ProfileMenuItem(
-                            icon: Icons.person_outline,
-                            title: 'Thông Tin Cá Nhân',
-                            onTap: _loadProfileFromAPI,
+                          // Account Section
+                          _MenuSection(
+                            title: 'Tài khoản',
+                            children: [
+                              _ProfileMenuItem(
+                                icon: Icons.person_outline_rounded,
+                                title: 'Thông tin cá nhân',
+                                onTap: _loadProfileFromAPI,
+                              ),
+                              _ProfileMenuItem(
+                                icon: Icons.location_on_outlined,
+                                title: 'Địa chỉ giao hàng',
+                                onTap: () {
+                                  // TODO: Navigate to addresses
+                                },
+                              ),
+                            ],
                           ),
-                          _ProfileMenuItem(
-                            icon: Icons.location_on_outlined,
-                            title: 'Địa Chỉ Giao Hàng',
-                            onTap: () {
-                              // TODO: Navigate to addresses
-                            },
-                          ),
-                          _ProfileMenuItem(
-                            icon: Icons.receipt_long_outlined,
-                            title: 'Đơn Hàng Của Tôi',
-                            onTap: () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (context) => const MyOrdersPage(),
-                                ),
-                              );
-                            },
-                          ),
-                          _ProfileMenuItem(
-                            icon: Icons.favorite_outline,
-                            title: 'Sản Phẩm Yêu Thích',
-                            onTap: () {
-                              // TODO: Navigate to favorites
-                            },
-                          ),
-                          _ProfileMenuItem(
-                            icon: Icons.notifications_outlined,
-                            title: 'Thông Báo',
-                            onTap: () {
-                              // TODO: Navigate to notifications
-                            },
-                          ),
-                          _ProfileMenuItem(
-                            icon: Icons.settings_outlined,
-                            title: 'Cài Đặt',
-                            onTap: () {
-                              // TODO: Navigate to settings
-                            },
-                          ),
-                          const Divider(height: 32),
-                          _ProfileMenuItem(
-                            icon: Icons.logout,
-                            title: 'Đăng Xuất',
-                            titleColor: AppColors.error,
-                            onTap: () async {
-                              // Hiển thị loading dialog
-                              if (context.mounted) {
-                                showDialog(
-                                  context: context,
-                                  barrierDismissible: false,
-                                  builder: (context) => const Center(
-                                    child: CircularProgressIndicator(),
-                                  ),
-                                );
-                              }
 
-                              // 1. Lấy userId trước khi xóa (để xóa cart)
-                              int? userId;
-                              try {
-                                userId = await UserStorage.getUserId();
-                              } catch (e) {
-                                print('⚠️ Error getting userId: $e');
-                              }
+                          const SizedBox(height: 20),
 
-                              // 2. Gọi API logout để backend biết user đã logout
-                              try {
-                                final authDataSource = AuthRemoteDataSourceImpl(
-                                  apiClient: ApiClient(),
-                                );
-                                await authDataSource.logout();
-                              } catch (e) {
-                                // Không cần xử lý error vì vẫn sẽ xóa local storage
-                                print('⚠️ Logout API error: $e');
-                              }
+                          // Orders Section
+                          _MenuSection(
+                            title: 'Đơn hàng',
+                            children: [
+                              _ProfileMenuItem(
+                                icon: Icons.receipt_long_outlined,
+                                title: 'Đơn hàng của tôi',
+                                onTap: () {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (context) =>
+                                          const MyOrdersPage(),
+                                    ),
+                                  );
+                                },
+                              ),
+                              _ProfileMenuItem(
+                                icon: Icons.favorite_outline_rounded,
+                                title: 'Sản phẩm yêu thích',
+                                onTap: () {
+                                  // TODO: Navigate to favorites
+                                },
+                              ),
+                            ],
+                          ),
 
-                              // 3. Xóa cart data và đóng Isar (nếu có userId)
-                              if (userId != null) {
-                                try {
-                                  final cartRepository = CartRepositoryImpl();
-                                  await cartRepository.clearCart(userId);
-                                  print('🗑️ Cart cleared for user: $userId');
-                                } catch (e) {
-                                  print('⚠️ Error clearing cart: $e');
-                                  // Không throw vì vẫn cần logout
+                          const SizedBox(height: 20),
+
+                          // Preferences Section
+                          _MenuSection(
+                            title: 'Tùy chọn',
+                            children: [
+                              _ProfileMenuItem(
+                                icon: Icons.notifications_outlined,
+                                title: 'Thông báo',
+                                onTap: () {
+                                  // TODO: Navigate to notifications
+                                },
+                              ),
+                              _ProfileMenuItem(
+                                icon: Icons.settings_outlined,
+                                title: 'Cài đặt',
+                                onTap: () {
+                                  // TODO: Navigate to settings
+                                },
+                              ),
+                            ],
+                          ),
+
+                          const SizedBox(height: 24),
+
+                          // Logout Button
+                          Container(
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(16),
+                              border: Border.all(
+                                color: AppColors.textLight.withOpacity(0.15),
+                                width: 1,
+                              ),
+                            ),
+                            child: _ProfileMenuItem(
+                              icon: Icons.logout_rounded,
+                              title: 'Đăng xuất',
+                              titleColor: AppColors.error,
+                              iconColor: AppColors.error,
+                              onTap: () async {
+                                if (context.mounted) {
+                                  showDialog(
+                                    context: context,
+                                    barrierDismissible: false,
+                                    builder: (context) => const Center(
+                                      child: CircularProgressIndicator(),
+                                    ),
+                                  );
                                 }
-                              }
-                              
-                              // 3.1. Đóng Isar instance
-                              try {
-                                await IsarService.close();
-                                print('✅ Isar closed');
-                              } catch (e) {
-                                print('⚠️ Error closing Isar: $e');
-                                // Không throw vì vẫn cần logout
-                              }
 
-                              // 4. Xóa tất cả token và user info từ local storage
-                              try {
-                                await TokenStorage.clearToken();
-                                await UserStorage.clearUser();
-                                print('✅ All data cleared');
-                              } catch (e) {
-                                print('⚠️ Error clearing storage: $e');
-                                // Vẫn tiếp tục navigate về login
-                              }
+                                int? userId;
+                                try {
+                                  userId = await UserStorage.getUserId();
+                                } catch (e) {
+                                  print('⚠️ Error getting userId: $e');
+                                }
 
-                              // 5. Đóng loading dialog và navigate về login
-                              if (context.mounted) {
-                                Navigator.of(
-                                  context,
-                                ).pop(); // Đóng loading dialog
-                                Navigator.of(context).pushAndRemoveUntil(
-                                  MaterialPageRoute(
-                                    builder: (context) => const LoginPage(),
-                                  ),
-                                  (route) => false,
-                                );
-                              }
-                            },
+                                try {
+                                  final authDataSource = AuthRemoteDataSourceImpl(
+                                    apiClient: ApiClient(),
+                                  );
+                                  await authDataSource.logout();
+                                } catch (e) {
+                                  print('⚠️ Logout API error: $e');
+                                }
+
+                                if (userId != null) {
+                                  try {
+                                    final cartRepository = CartRepositoryImpl();
+                                    await cartRepository.clearCart(userId);
+                                    print('🗑️ Cart cleared for user: $userId');
+                                  } catch (e) {
+                                    print('⚠️ Error clearing cart: $e');
+                                  }
+                                }
+
+                                try {
+                                  await IsarService.close();
+                                  print('✅ Isar closed');
+                                } catch (e) {
+                                  print('⚠️ Error closing Isar: $e');
+                                }
+
+                                try {
+                                  await TokenStorage.clearToken();
+                                  await UserStorage.clearUser();
+                                  print('✅ All data cleared');
+                                } catch (e) {
+                                  print('⚠️ Error clearing storage: $e');
+                                }
+
+                                if (context.mounted) {
+                                  Navigator.of(context).pop();
+                                  Navigator.of(context).pushAndRemoveUntil(
+                                    MaterialPageRoute(
+                                      builder: (context) => const LoginPage(),
+                                    ),
+                                    (route) => false,
+                                  );
+                                }
+                              },
+                            ),
                           ),
                         ],
                       ),
@@ -393,65 +449,127 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
   }
 }
 
+class _MenuSection extends StatelessWidget {
+  final String title;
+  final List<Widget> children;
+
+  const _MenuSection({required this.title, required this.children});
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.only(left: 4, bottom: 10),
+          child: Text(
+            title.toUpperCase(),
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              color: AppColors.textSecondary.withOpacity(0.7),
+              letterSpacing: 0.5,
+              height: 1.2,
+            ),
+          ),
+        ),
+        Container(
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(
+              color: AppColors.textLight.withOpacity(0.12),
+              width: 1,
+            ),
+          ),
+          child: Column(children: _buildChildrenWithDividers()),
+        ),
+      ],
+    );
+  }
+
+  List<Widget> _buildChildrenWithDividers() {
+    final List<Widget> result = [];
+    for (int i = 0; i < children.length; i++) {
+      result.add(children[i]);
+      if (i < children.length - 1) {
+        result.add(
+          Divider(
+            height: 1,
+            thickness: 1,
+            indent: 72,
+            endIndent: 16,
+            color: AppColors.textLight.withOpacity(0.08),
+          ),
+        );
+      }
+    }
+    return result;
+  }
+}
+
 class _ProfileMenuItem extends StatelessWidget {
   final IconData icon;
   final String title;
   final Color? titleColor;
+  final Color? iconColor;
   final VoidCallback onTap;
 
   const _ProfileMenuItem({
     required this.icon,
     required this.title,
     this.titleColor,
+    this.iconColor,
     required this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(12),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-        margin: const EdgeInsets.only(bottom: 8),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(12),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.05),
-              blurRadius: 10,
-              offset: const Offset(0, 2),
-            ),
-          ],
-        ),
-        child: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: AppColors.primaryVeryLight,
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Icon(
-                icon,
-                color: titleColor ?? AppColors.primary,
-                size: 24,
-              ),
-            ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Text(
-                title,
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w500,
-                  color: titleColor ?? AppColors.textPrimary,
+    final isDestructive = titleColor == AppColors.error;
+    
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(16),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+          child: Row(
+            children: [
+              Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  color: (iconColor ?? AppColors.primary)
+                      .withOpacity(isDestructive ? 0.1 : 0.1),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(
+                  icon,
+                  color: iconColor ?? AppColors.primary,
+                  size: 22,
                 ),
               ),
-            ),
-            Icon(Icons.chevron_right, color: AppColors.textLight),
-          ],
+              const SizedBox(width: 16),
+              Expanded(
+                child: Text(
+                  title,
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w500,
+                    color: titleColor ?? AppColors.textPrimary,
+                    height: 1.3,
+                    letterSpacing: -0.2,
+                  ),
+                ),
+              ),
+              Icon(
+                Icons.chevron_right_rounded,
+                color: AppColors.textLight.withOpacity(0.6),
+                size: 22,
+              ),
+            ],
+          ),
         ),
       ),
     );

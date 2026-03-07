@@ -279,7 +279,28 @@ class OrderRemoteDataSourceImpl implements OrderRemoteDataSource {
       );
 
       print('📥 Order tracking response status: ${response.statusCode}');
-      print('📥 Order tracking response data: ${response.data}');
+      print('📥 Order tracking response data (raw): ${response.data}');
+      
+      // Parse response để kiểm tra structure
+      final responseData = response.data as Map<String, dynamic>;
+      print('📥 Response structure:');
+      print('  - Has "data" key: ${responseData.containsKey('data')}');
+      print('  - Has "code" key: ${responseData.containsKey('code')}');
+      print('  - Has "message" key: ${responseData.containsKey('message')}');
+      
+      if (responseData.containsKey('data')) {
+        final dataMap = responseData['data'] as Map<String, dynamic>?;
+        if (dataMap != null) {
+          print('📥 Data object keys: ${dataMap.keys.toList()}');
+          print('📥 Location fields in data:');
+          print('  - shopLat: ${dataMap['shopLat']} (type: ${dataMap['shopLat'].runtimeType})');
+          print('  - shopLng: ${dataMap['shopLng']} (type: ${dataMap['shopLng'].runtimeType})');
+          print('  - customerLat: ${dataMap['customerLat']} (type: ${dataMap['customerLat'].runtimeType})');
+          print('  - customerLng: ${dataMap['customerLng']} (type: ${dataMap['customerLng'].runtimeType})');
+          print('  - shipperCurrentLat: ${dataMap['shipperCurrentLat']} (type: ${dataMap['shipperCurrentLat'].runtimeType})');
+          print('  - shipperCurrentLng: ${dataMap['shipperCurrentLng']} (type: ${dataMap['shipperCurrentLng'].runtimeType})');
+        }
+      }
 
       final apiResponse = ApiResponse<OrderTrackingResponseDto>.fromJson(
         response.data as Map<String, dynamic>,
@@ -293,6 +314,19 @@ class OrderRemoteDataSourceImpl implements OrderRemoteDataSource {
         print('✅ Tracking data parsed successfully');
         print('  - shopLat: ${apiResponse.data!.shopLat}, shopLng: ${apiResponse.data!.shopLng}');
         print('  - customerLat: ${apiResponse.data!.customerLat}, customerLng: ${apiResponse.data!.customerLng}');
+        print('  - shipperCurrentLat: ${apiResponse.data!.shipperCurrentLat}, shipperCurrentLng: ${apiResponse.data!.shipperCurrentLng}');
+        
+        // Warning nếu location data vẫn null
+        if (apiResponse.data!.shopLat == null || apiResponse.data!.shopLng == null) {
+          print('⚠️ WARNING: shopLat/shopLng is NULL - Backend chưa trả về shop location!');
+        }
+        if (apiResponse.data!.customerLat == null || apiResponse.data!.customerLng == null) {
+          print('⚠️ WARNING: customerLat/customerLng is NULL - Backend chưa trả về customer location!');
+        }
+        if (apiResponse.data!.shipperCurrentLat == null || apiResponse.data!.shipperCurrentLng == null) {
+          print('⚠️ INFO: shipperCurrentLat/shipperCurrentLng is NULL - Shipper chưa gửi location hoặc chưa bắt đầu di chuyển');
+        }
+        
         return apiResponse.data!;
       } else {
         print('❌ Tracking data is null, message: ${apiResponse.message}');

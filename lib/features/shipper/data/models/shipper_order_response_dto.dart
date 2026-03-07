@@ -73,8 +73,10 @@ class ShipperOrderResponseDto {
       shopName: safeStringRequired(json['shopName']),
       customerLat: (json['customerLat'] as num?)?.toDouble(),
       customerLng: (json['customerLng'] as num?)?.toDouble(),
-      estimatedDeliveryMinutes: (json['estimatedDeliveryMinutes'] as num?)?.toInt(),
-      estimatedDistanceMeters: (json['estimatedDistanceMeters'] as num?)?.toInt(),
+      estimatedDeliveryMinutes: (json['estimatedDeliveryMinutes'] as num?)
+          ?.toInt(),
+      estimatedDistanceMeters: (json['estimatedDistanceMeters'] as num?)
+          ?.toInt(),
       shipperId: (json['shipperId'] as num?)?.toInt(),
       status: safeStringRequired(json['status']),
       totalPrice: (json['totalPrice'] as num?)?.toDouble(),
@@ -86,8 +88,12 @@ class ShipperOrderResponseDto {
       paymentMethod: safeString(json['paymentMethod']),
       createdAt: safeStringRequired(json['createdAt']),
       updatedAt: safeStringRequired(json['updatedAt']),
-      items: (json['items'] as List<dynamic>?)
-              ?.map((item) => ShipperOrderItemDto.fromJson(item as Map<String, dynamic>))
+      items:
+          (json['items'] as List<dynamic>?)
+              ?.map(
+                (item) =>
+                    ShipperOrderItemDto.fromJson(item as Map<String, dynamic>),
+              )
               .toList() ??
           [],
     );

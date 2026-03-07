@@ -4,6 +4,7 @@ class OrderTrackingResponseDto {
   final String statusDisplayName;
   final String statusDescription;
   final int? shipperId;
+  final String? shipperName;
   final double? shipperCurrentLat;
   final double? shipperCurrentLng;
   final String? shipperLocationUpdatedAt;
@@ -21,6 +22,7 @@ class OrderTrackingResponseDto {
     required this.statusDisplayName,
     required this.statusDescription,
     this.shipperId,
+    this.shipperName,
     this.shipperCurrentLat,
     this.shipperCurrentLng,
     this.shipperLocationUpdatedAt,
@@ -40,6 +42,7 @@ class OrderTrackingResponseDto {
       statusDisplayName: json['statusDisplayName'] as String? ?? '',
       statusDescription: json['statusDescription'] as String? ?? '',
       shipperId: (json['shipperId'] as num?)?.toInt(),
+      shipperName: json['shipperName'] as String?,
       shipperCurrentLat: (json['shipperCurrentLat'] as num?)?.toDouble(),
       shipperCurrentLng: (json['shipperCurrentLng'] as num?)?.toDouble(),
       shipperLocationUpdatedAt: json['shipperLocationUpdatedAt'] as String?,

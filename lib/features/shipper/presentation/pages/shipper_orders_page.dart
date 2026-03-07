@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../../../core/network/api_client.dart';
@@ -48,6 +49,23 @@ class _ShipperOrdersPageState extends State<ShipperOrdersPage>
     });
     if (_shipperId != null) {
       _loadOrders();
+      // Kiểm tra và resume tracking ngay khi vào app (kể cả sau logout/login lại)
+      _checkAndResumeTracking();
+    }
+  }
+
+  /// Kiểm tra xem có đơn đang giao không → tự động resume tracking
+  /// Chạy ngay lúc init, không phụ thuộc vào tab nào đang active
+  Future<void> _checkAndResumeTracking() async {
+    if (_locationTrackingService.isTracking) return;
+    try {
+      final shippingOrders = await _shipperDataSource.getMyOrders(status: 'shipping');
+      if (shippingOrders.isNotEmpty && !_locationTrackingService.isTracking) {
+        await _locationTrackingService.startTracking(shippingOrders.first.id);
+        print('✅ Resumed tracking for order ${shippingOrders.first.id}');
+      }
+    } catch (e) {
+      print('⚠️ Could not resume tracking on startup: $e');
     }
   }
 
@@ -110,6 +128,16 @@ class _ShipperOrdersPageState extends State<ShipperOrdersPage>
         _myOrders = orders;
         _loadingMyOrders = false;
       });
+
+      // Auto-resume tracking nếu có đơn đang giao và chưa tracking
+      if (status == 'shipping' && orders.isNotEmpty && !_locationTrackingService.isTracking) {
+        try {
+          await _locationTrackingService.startTracking(orders.first.id);
+          print('✅ Auto-resumed location tracking for order ${orders.first.id}');
+        } catch (e) {
+          print('⚠️ Could not auto-resume location tracking: $e');
+        }
+      }
     } catch (e) {
       print('❌ Error loading my orders: $e');
       setState(() {
@@ -134,9 +162,35 @@ class _ShipperOrdersPageState extends State<ShipperOrdersPage>
         _loadingAvailable = true;
       });
 
+      // Lấy vị trí GPS hiện tại để gửi lên BE (bắt buộc khi nhận đơn)
+      double? currentLat;
+      double? currentLng;
+      try {
+        bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+        if (serviceEnabled) {
+          LocationPermission permission = await Geolocator.checkPermission();
+          if (permission == LocationPermission.denied) {
+            permission = await Geolocator.requestPermission();
+          }
+          if (permission != LocationPermission.denied &&
+              permission != LocationPermission.deniedForever) {
+            final position = await Geolocator.getCurrentPosition(
+              desiredAccuracy: LocationAccuracy.medium,
+              timeLimit: const Duration(seconds: 8),
+            );
+            currentLat = position.latitude;
+            currentLng = position.longitude;
+          }
+        }
+      } catch (e) {
+        print('⚠️ Could not get GPS location: $e');
+      }
+
       final request = UpdateShipperStatusRequestDto(
         shipperId: _shipperId!,
         status: 'shipping',
+        lat: currentLat,
+        lng: currentLng,
       );
 
       await _shipperDataSource.updateShipperStatus(order.id, request);
@@ -436,8 +490,6 @@ class _ShipperOrdersPageState extends State<ShipperOrdersPage>
             ],
             // Map preview và route (chỉ hiển thị cho available orders)
             if (showAcceptButton &&
-                order.shopLat != null &&
-                order.shopLng != null &&
                 order.customerLat != null &&
                 order.customerLng != null) ...[
               const SizedBox(height: 16),
@@ -543,19 +595,16 @@ class _ShipperOrdersPageState extends State<ShipperOrdersPage>
   }
 
   Widget _buildRouteMapPreview(ShipperOrderResponseDto order) {
-    if (order.shopLat == null ||
-        order.shopLng == null ||
-        order.customerLat == null ||
-        order.customerLng == null) {
+    if (order.customerLat == null || order.customerLng == null) {
       return const SizedBox.shrink();
     }
 
-    final shopLatLng = LatLng(order.shopLat!, order.shopLng!);
+    final shopLatLng = LatLng(order.shopLat, order.shopLng);
     final customerLatLng = LatLng(order.customerLat!, order.customerLng!);
 
     // Center point giữa shop và customer
-    final centerLat = (order.shopLat! + order.customerLat!) / 2;
-    final centerLng = (order.shopLng! + order.customerLng!) / 2;
+    final centerLat = (order.shopLat + order.customerLat!) / 2;
+    final centerLng = (order.shopLng + order.customerLng!) / 2;
     final centerLatLng = LatLng(centerLat, centerLng);
 
     return Container(

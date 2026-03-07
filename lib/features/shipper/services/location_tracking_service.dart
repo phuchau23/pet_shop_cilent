@@ -5,7 +5,6 @@ import '../data/datasources/remote/shipper_remote_data_source.dart';
 import '../data/models/update_shipper_location_request_dto.dart';
 
 class LocationTrackingService {
-  StreamSubscription<Position>? _positionStream;
   int? _currentOrderId;
   final ShipperRemoteDataSource _dataSource;
   Timer? _locationUpdateTimer;
@@ -13,14 +12,13 @@ class LocationTrackingService {
   LocationTrackingService()
       : _dataSource = ShipperRemoteDataSourceImpl(apiClient: ApiClient());
 
-  /// Bắt đầu tracking GPS và gửi location lên server
+  /// Bắt đầu tracking GPS và gửi location lên server mỗi 5 giây
   Future<void> startTracking(int orderId) async {
-    // Stop existing tracking if any
     await stopTracking();
 
     _currentOrderId = orderId;
 
-    // Request permission
+    // Kiểm tra permission
     bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
     if (!serviceEnabled) {
       throw Exception('Location service is disabled. Please enable it in settings.');
@@ -40,57 +38,57 @@ class LocationTrackingService {
 
     print('📍 Starting location tracking for order $orderId');
 
-    // Listen to position changes
-    _positionStream = Geolocator.getPositionStream(
-      locationSettings: const LocationSettings(
-        accuracy: LocationAccuracy.high,
-        distanceFilter: 10, // Update mỗi 10 mét
-      ),
-    ).listen(
-      (Position position) {
-        // Gửi location lên server
-        _sendLocationToServer(orderId, position.latitude, position.longitude);
-      },
-      onError: (error) {
-        print('❌ Error in position stream: $error');
-      },
-    );
+    // Gửi ngay lập tức lần đầu
+    await _sendCurrentLocation(orderId);
 
-    // Gửi location ngay lập tức
-    try {
-      final currentPosition = await Geolocator.getCurrentPosition(
-        desiredAccuracy: LocationAccuracy.high,
-      );
-      await _sendLocationToServer(orderId, currentPosition.latitude, currentPosition.longitude);
-    } catch (e) {
-      print('⚠️ Could not get current position: $e');
-    }
+    // Timer mỗi 5 giây gọi getCurrentPosition() - luôn lấy vị trí hiện tại,
+    // hoạt động đúng cả trên emulator khi chỉnh mock location
+    _locationUpdateTimer = Timer.periodic(const Duration(seconds: 5), (_) {
+      _sendCurrentLocation(orderId);
+    });
   }
 
-  /// Gửi location lên server
-  Future<void> _sendLocationToServer(int orderId, double lat, double lng) async {
+  /// Lấy vị trí hiện tại và gửi lên server
+  Future<void> _sendCurrentLocation(int orderId) async {
     try {
+      Position? position;
+
+      try {
+        // forceLocationManager=true: dùng legacy LocationManager thay vì FusedLocationProvider
+        // FusedLocationProvider không đọc được mock location từ Extended Controls trên emulator
+        // accuracy.best + forceLocationManager=true → dùng GPS_PROVIDER trực tiếp
+        // Extended Controls inject mock vào GPS_PROVIDER, NETWORK_PROVIDER không nhận mock
+        position = await Geolocator.getPositionStream(
+          locationSettings: AndroidSettings(
+            accuracy: LocationAccuracy.best,
+            forceLocationManager: true,
+          ),
+        ).first.timeout(const Duration(seconds: 8));
+      } catch (_) {
+        // Fallback: last known (không timeout)
+        position = await Geolocator.getLastKnownPosition();
+      }
+
+      if (position == null) return;
+
       await _dataSource.updateShipperLocation(
         orderId,
-        UpdateShipperLocationRequestDto(lat: lat, lng: lng),
+        UpdateShipperLocationRequestDto(lat: position.latitude, lng: position.longitude),
       );
-      print('✅ Location sent: $lat, $lng');
+      print('✅ Location sent: ${position.latitude}, ${position.longitude}');
     } catch (e) {
       print('❌ Error sending location: $e');
-      // Không throw để không làm gián đoạn tracking
     }
   }
 
   /// Dừng tracking GPS
   Future<void> stopTracking() async {
     print('🛑 Stopping location tracking');
-    await _positionStream?.cancel();
-    _positionStream = null;
     _locationUpdateTimer?.cancel();
     _locationUpdateTimer = null;
     _currentOrderId = null;
   }
 
   int? get currentOrderId => _currentOrderId;
-  bool get isTracking => _positionStream != null;
+  bool get isTracking => _locationUpdateTimer != null;
 }

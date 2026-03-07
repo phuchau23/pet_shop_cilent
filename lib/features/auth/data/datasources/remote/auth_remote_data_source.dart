@@ -23,16 +23,21 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
   @override
   Future<LoginResponseDto> login(LoginRequestDto request) async {
     try {
+      // Đảm bảo ApiClient đã được khởi tạo xong (quan trọng cho thiết bị thật)
+      await apiClient.ensureInitialized();
+
       // Kiểm tra xem có token cũ không (để debug)
       final oldToken = await TokenStorage.getToken();
       if (oldToken != null) {
         print('⚠️ Found old token in storage (will be ignored for login)');
       }
 
-      final fullUrl = '${ApiClient.baseUrl}${ApiEndpoints.login}';
+      // Lấy baseUrl thực tế từ Dio instance (đã được cập nhật)
+      final actualBaseUrl = apiClient.dio.options.baseUrl;
+      final fullUrl = '$actualBaseUrl${ApiEndpoints.login}';
       print('📤 Sending login request to: $fullUrl');
       print('📤 Request data: ${request.toJson()}');
-      print('📤 Base URL: ${ApiClient.baseUrl}');
+      print('📤 Actual Base URL from Dio: $actualBaseUrl');
       print('📤 Endpoint: ${ApiEndpoints.login}');
 
       final response = await apiClient.dio.post(
@@ -60,8 +65,12 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
     GoogleLoginRequestDto request,
   ) async {
     try {
+      // Đảm bảo ApiClient đã được khởi tạo xong
+      await apiClient.ensureInitialized();
+
+      final actualBaseUrl = apiClient.dio.options.baseUrl;
       print(
-        '📤 Sending Google login request to: ${ApiClient.baseUrl}${ApiEndpoints.googleLogin}',
+        '📤 Sending Google login request to: $actualBaseUrl${ApiEndpoints.googleLogin}',
       );
       print('📤 Request data: {idToken: [REDACTED]}');
 
@@ -96,10 +105,41 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
   }
 
   Never _handleDioError(DioException e) {
+    print('❌ DioException type: ${e.type}');
+    print('❌ DioException message: ${e.message}');
+    print('❌ Request URL: ${e.requestOptions.uri}');
+    print('❌ Request baseUrl: ${e.requestOptions.baseUrl}');
+    
+    // Xử lý các loại lỗi kết nối
+    if (e.type == DioExceptionType.connectionTimeout ||
+        e.type == DioExceptionType.receiveTimeout ||
+        e.type == DioExceptionType.sendTimeout) {
+      print('❌ Timeout error - có thể do baseUrl sai hoặc server không phản hồi');
+      throw Exception(
+        'Kết nối timeout. Vui lòng kiểm tra:\n'
+        '- Địa chỉ IP server: ${e.requestOptions.baseUrl}\n'
+        '- Kết nối mạng của bạn\n'
+        '- Server có đang chạy không',
+      );
+    }
+
+    if (e.type == DioExceptionType.connectionError) {
+      print('❌ Connection error - không thể kết nối đến server');
+      throw Exception(
+        'Không thể kết nối đến server.\n'
+        'Địa chỉ: ${e.requestOptions.baseUrl}\n'
+        'Vui lòng kiểm tra:\n'
+        '- Server có đang chạy không\n'
+        '- IP address có đúng không\n'
+        '- Thiết bị và máy tính có cùng mạng WiFi không',
+      );
+    }
+
     if (e.response != null) {
       final errorData = e.response!.data;
       print('❌ Error response data type: ${errorData.runtimeType}');
       print('❌ Error response data: $errorData');
+      print('❌ Status code: ${e.response?.statusCode}');
 
       if (errorData is Map<String, dynamic>) {
         // Thử parse theo format ApiResponse
@@ -135,8 +175,12 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
   @override
   Future<ProfileResponseDto> getProfile() async {
     try {
+      // Đảm bảo ApiClient đã được khởi tạo xong
+      await apiClient.ensureInitialized();
+
+      final actualBaseUrl = apiClient.dio.options.baseUrl;
       print(
-        '📤 Getting profile: ${ApiClient.baseUrl}${ApiEndpoints.getAuthProfile}',
+        '📤 Getting profile: $actualBaseUrl${ApiEndpoints.getAuthProfile}',
       );
 
       final response = await apiClient.dio.get(ApiEndpoints.getAuthProfile);
