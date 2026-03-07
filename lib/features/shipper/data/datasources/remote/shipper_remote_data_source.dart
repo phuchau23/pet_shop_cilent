@@ -44,7 +44,11 @@ class ShipperRemoteDataSourceImpl implements ShipperRemoteDataSource {
       final apiResponse = ApiResponse<List<ShipperOrderResponseDto>>.fromJson(
         response.data as Map<String, dynamic>,
         (data) => (data as List<dynamic>)
-            .map((item) => ShipperOrderResponseDto.fromJson(item as Map<String, dynamic>))
+            .map(
+              (item) => ShipperOrderResponseDto.fromJson(
+                item as Map<String, dynamic>,
+              ),
+            )
             .toList(),
       );
 
@@ -87,7 +91,11 @@ class ShipperRemoteDataSourceImpl implements ShipperRemoteDataSource {
       final apiResponse = ApiResponse<List<ShipperOrderResponseDto>>.fromJson(
         response.data as Map<String, dynamic>,
         (data) => (data as List<dynamic>)
-            .map((item) => ShipperOrderResponseDto.fromJson(item as Map<String, dynamic>))
+            .map(
+              (item) => ShipperOrderResponseDto.fromJson(
+                item as Map<String, dynamic>,
+              ),
+            )
             .toList(),
       );
 
@@ -128,16 +136,14 @@ class ShipperRemoteDataSourceImpl implements ShipperRemoteDataSource {
 
       final url = '${ApiEndpoints.updateShipperStatus}/$orderId/shipper-status';
 
-      final response = await apiClient.dio.patch(
-        url,
-        data: request.toJson(),
-      );
+      final response = await apiClient.dio.patch(url, data: request.toJson());
 
       print('📥 Update shipper status response status: ${response.statusCode}');
 
       final apiResponse = ApiResponse<ShipperOrderResponseDto>.fromJson(
         response.data as Map<String, dynamic>,
-        (data) => ShipperOrderResponseDto.fromJson(data as Map<String, dynamic>),
+        (data) =>
+            ShipperOrderResponseDto.fromJson(data as Map<String, dynamic>),
       );
 
       if (apiResponse.data != null) {
@@ -173,16 +179,18 @@ class ShipperRemoteDataSourceImpl implements ShipperRemoteDataSource {
     UpdateShipperLocationRequestDto request,
   ) async {
     try {
-      print('📤 Updating shipper location for order $orderId: ${request.lat}, ${request.lng}');
-
-      final url = '${ApiEndpoints.updateShipperLocation}/$orderId/shipper-location';
-
-      final response = await apiClient.dio.post(
-        url,
-        data: request.toJson(),
+      print(
+        '📤 Updating shipper location for order $orderId: ${request.lat}, ${request.lng}',
       );
 
-      print('📥 Update shipper location response status: ${response.statusCode}');
+      final url =
+          '${ApiEndpoints.updateShipperLocation}/$orderId/shipper-location';
+
+      final response = await apiClient.dio.post(url, data: request.toJson());
+
+      print(
+        '📥 Update shipper location response status: ${response.statusCode}',
+      );
 
       final apiResponse = ApiResponse<dynamic>.fromJson(
         response.data as Map<String, dynamic>,

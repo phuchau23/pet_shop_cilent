@@ -16,13 +16,19 @@ final userIdProvider = FutureProvider<int?>((ref) async {
 });
 
 // Cart Items Provider
-final cartItemsProvider = FutureProvider.family<List<CartItem>, int>((ref, userId) async {
+final cartItemsProvider = FutureProvider.family<List<CartItem>, int>((
+  ref,
+  userId,
+) async {
   final repository = ref.watch(cartRepositoryProvider);
   return await repository.getCartItems(userId);
 });
 
 // Cart Item Count Provider
-final cartItemCountProvider = FutureProvider.family<int, int>((ref, userId) async {
+final cartItemCountProvider = FutureProvider.family<int, int>((
+  ref,
+  userId,
+) async {
   final repository = ref.watch(cartRepositoryProvider);
   return await repository.getCartItemCount(userId);
 });
@@ -33,7 +39,7 @@ class CartNotifier extends StateNotifier<AsyncValue<List<CartItem>>> {
   final int _userId;
 
   CartNotifier(this._repository, this._userId)
-      : super(const AsyncValue.loading()) {
+    : super(const AsyncValue.loading()) {
     _loadCart();
   }
 
@@ -48,7 +54,11 @@ class CartNotifier extends StateNotifier<AsyncValue<List<CartItem>>> {
     }
   }
 
-  Future<void> addToCart(Product product, ProductSize productSize, int quantity) async {
+  Future<void> addToCart(
+    Product product,
+    ProductSize productSize,
+    int quantity,
+  ) async {
     try {
       await _repository.addToCart(_userId, product, productSize, quantity);
       await _loadCart();
@@ -60,9 +70,18 @@ class CartNotifier extends StateNotifier<AsyncValue<List<CartItem>>> {
     }
   }
 
-  Future<void> updateQuantity(int productId, int productSizeId, int quantity) async {
+  Future<void> updateQuantity(
+    int productId,
+    int productSizeId,
+    int quantity,
+  ) async {
     try {
-      await _repository.updateQuantity(_userId, productId, productSizeId, quantity);
+      await _repository.updateQuantity(
+        _userId,
+        productId,
+        productSizeId,
+        quantity,
+      );
       await _loadCart();
     } catch (e) {
       print('❌ Error updating quantity: $e');
@@ -94,11 +113,11 @@ class CartNotifier extends StateNotifier<AsyncValue<List<CartItem>>> {
 // Cart Notifier Provider
 final cartNotifierProvider =
     StateNotifierProvider.family<CartNotifier, AsyncValue<List<CartItem>>, int>(
-  (ref, userId) {
-    final repository = ref.watch(cartRepositoryProvider);
-    return CartNotifier(repository, userId);
-  },
-);
+      (ref, userId) {
+        final repository = ref.watch(cartRepositoryProvider);
+        return CartNotifier(repository, userId);
+      },
+    );
 
 // Cart Count Notifier
 class CartCountNotifier extends StateNotifier<AsyncValue<int>> {
@@ -106,7 +125,7 @@ class CartCountNotifier extends StateNotifier<AsyncValue<int>> {
   final int _userId;
 
   CartCountNotifier(this._repository, this._userId)
-      : super(const AsyncValue.loading()) {
+    : super(const AsyncValue.loading()) {
     _loadCount();
   }
 
@@ -126,9 +145,10 @@ class CartCountNotifier extends StateNotifier<AsyncValue<int>> {
 
 // Cart Count Notifier Provider
 final cartCountNotifierProvider =
-    StateNotifierProvider.family<CartCountNotifier, AsyncValue<int>, int>(
-  (ref, userId) {
-    final repository = ref.watch(cartRepositoryProvider);
-    return CartCountNotifier(repository, userId);
-  },
-);
+    StateNotifierProvider.family<CartCountNotifier, AsyncValue<int>, int>((
+      ref,
+      userId,
+    ) {
+      final repository = ref.watch(cartRepositoryProvider);
+      return CartCountNotifier(repository, userId);
+    });

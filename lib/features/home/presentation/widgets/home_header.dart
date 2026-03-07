@@ -11,23 +11,25 @@ class HomeHeader extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final topPadding = MediaQuery.of(context).padding.top;
     return SliverPersistentHeader(
       pinned: true,
-      delegate: _HomeHeaderDelegate(ref: ref),
+      delegate: _HomeHeaderDelegate(ref: ref, topPadding: topPadding),
     );
   }
 }
 
 class _HomeHeaderDelegate extends SliverPersistentHeaderDelegate {
   final WidgetRef ref;
+  final double topPadding;
 
-  _HomeHeaderDelegate({required this.ref});
-
-  @override
-  double get minExtent => 130.0;
+  _HomeHeaderDelegate({required this.ref, required this.topPadding});
 
   @override
-  double get maxExtent => 130.0;
+  double get minExtent => topPadding + 80.0;
+
+  @override
+  double get maxExtent => topPadding + 80.0;
 
   @override
   Widget build(
@@ -35,101 +37,78 @@ class _HomeHeaderDelegate extends SliverPersistentHeaderDelegate {
     double shrinkOffset,
     bool overlapsContent,
   ) {
-    final topPadding = MediaQuery.of(context).padding.top;
-
     return Container(
-      height: 130.0,
-      padding: EdgeInsets.fromLTRB(16, topPadding + 8, 16, 16),
-      decoration: const BoxDecoration(
-        color: AppColors.primary,
-        borderRadius: BorderRadius.only(
-          bottomLeft: Radius.circular(20),
-          bottomRight: Radius.circular(20),
+      padding: EdgeInsets.fromLTRB(20, topPadding + 20, 20, 20),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        border: Border(
+          bottom: BorderSide(
+            color: AppColors.textLight.withOpacity(0.1),
+            width: 1,
+          ),
         ),
       ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        mainAxisAlignment: MainAxisAlignment.center,
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          // Location và Icons
+          Expanded(
+            child: FutureBuilder<String?>(
+              future: UserStorage.getUserFullName(),
+              builder: (context, snapshot) {
+                final userName = snapshot.data ?? 'Guest';
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      'Xin chào',
+                      style: TextStyle(
+                        color: AppColors.textSecondary,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w400,
+                        height: 1.0,
+                        letterSpacing: 0.1,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      userName,
+                      style: const TextStyle(
+                        color: AppColors.textPrimary,
+                        fontSize: 18,
+                        fontWeight: FontWeight.w600,
+                        letterSpacing: -0.3,
+                        height: 1.0,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
+                );
+              },
+            ),
+          ),
+          const SizedBox(width: 12),
           Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            crossAxisAlignment: CrossAxisAlignment.center,
+            mainAxisSize: MainAxisSize.min,
             children: [
-              Flexible(
-                child: FutureBuilder<String?>(
-                  future: UserStorage.getUserFullName(),
-                  builder: (context, snapshot) {
-                    final userName = snapshot.data ?? 'Guest';
-                    return Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const Icon(Icons.person, color: Colors.white, size: 20),
-                        const SizedBox(width: 8),
-                        Flexible(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Text(
-                                'Xin chào',
-                                style: TextStyle(
-                                  color: Colors.white.withOpacity(0.8),
-                                  fontSize: 12,
-                                ),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                              Text(
-                                userName,
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    );
-                  },
-                ),
+              _HeaderIconButton(
+                icon: Icons.search_rounded,
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => const SearchPage()),
+                  );
+                },
               ),
-              Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  IconButton(
-                    icon: const Icon(
-                      Icons.search_rounded,
-                      color: Colors.white,
-                      size: 24,
-                    ),
-                    padding: EdgeInsets.zero,
-                    constraints: const BoxConstraints(),
-                    onPressed: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => const SearchPage(),
-                        ),
-                      );
-                    },
-                  ),
-                  _CartIconButton(ref: ref),
-                  IconButton(
-                    icon: const Icon(
-                      Icons.notifications_outlined,
-                      color: Colors.white,
-                      size: 24,
-                    ),
-                    padding: EdgeInsets.zero,
-                    constraints: const BoxConstraints(),
-                    onPressed: () {},
-                  ),
-                ],
+              const SizedBox(width: 8),
+              _CartIconButton(ref: ref),
+              const SizedBox(width: 8),
+              _HeaderIconButton(
+                icon: Icons.notifications_outlined,
+                onPressed: () {},
               ),
             ],
           ),
@@ -140,7 +119,33 @@ class _HomeHeaderDelegate extends SliverPersistentHeaderDelegate {
 
   @override
   bool shouldRebuild(covariant SliverPersistentHeaderDelegate oldDelegate) {
-    return oldDelegate is! _HomeHeaderDelegate || oldDelegate.ref != ref;
+    return oldDelegate is! _HomeHeaderDelegate ||
+        oldDelegate.ref != ref ||
+        oldDelegate.topPadding != topPadding;
+  }
+}
+
+class _HeaderIconButton extends StatelessWidget {
+  final IconData icon;
+  final VoidCallback onPressed;
+
+  const _HeaderIconButton({required this.icon, required this.onPressed});
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onPressed,
+        borderRadius: BorderRadius.circular(12),
+        child: Container(
+          width: 40,
+          height: 40,
+          alignment: Alignment.center,
+          child: Icon(icon, color: AppColors.textPrimary, size: 22),
+        ),
+      ),
+    );
   }
 }
 
@@ -155,14 +160,8 @@ class _CartIconButton extends ConsumerWidget {
       future: UserStorage.getUserId(),
       builder: (context, snapshot) {
         if (!snapshot.hasData || snapshot.data == null) {
-          return IconButton(
-            icon: const Icon(
-              Icons.shopping_cart_outlined,
-              color: Colors.white,
-              size: 24,
-            ),
-            padding: EdgeInsets.zero,
-            constraints: const BoxConstraints(),
+          return _HeaderIconButton(
+            icon: Icons.shopping_cart_outlined,
             onPressed: () {},
           );
         }
@@ -173,14 +172,8 @@ class _CartIconButton extends ConsumerWidget {
         return Stack(
           clipBehavior: Clip.none,
           children: [
-            IconButton(
-              icon: const Icon(
-                Icons.shopping_cart_outlined,
-                color: Colors.white,
-                size: 24,
-              ),
-              padding: EdgeInsets.zero,
-              constraints: const BoxConstraints(),
+            _HeaderIconButton(
+              icon: Icons.shopping_cart_outlined,
               onPressed: () {
                 Navigator.push(
                   context,
@@ -195,10 +188,14 @@ class _CartIconButton extends ConsumerWidget {
                   right: 0,
                   top: 0,
                   child: Container(
-                    padding: const EdgeInsets.all(4),
-                    decoration: const BoxDecoration(
-                      color: Colors.red,
-                      shape: BoxShape.circle,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 5,
+                      vertical: 2,
+                    ),
+                    decoration: BoxDecoration(
+                      color: AppColors.error,
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(color: Colors.white, width: 2),
                     ),
                     constraints: const BoxConstraints(
                       minWidth: 18,
@@ -209,7 +206,8 @@ class _CartIconButton extends ConsumerWidget {
                       style: const TextStyle(
                         color: Colors.white,
                         fontSize: 10,
-                        fontWeight: FontWeight.bold,
+                        fontWeight: FontWeight.w600,
+                        height: 1,
                       ),
                       textAlign: TextAlign.center,
                     ),

@@ -22,56 +22,72 @@ class _CategorySectionState extends State<CategorySection> {
 
   @override
   Widget build(BuildContext context) {
+    if (widget.isLoading && widget.categories.isEmpty) {
     return SliverToBoxAdapter(
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16),
+          padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 const Text(
-                  'Category',
+                'Danh mục',
                   style: TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
+                  fontSize: 22,
+                  fontWeight: FontWeight.w600,
                     color: AppColors.textPrimary,
+                  letterSpacing: -0.5,
+                  height: 1.2,
                   ),
                 ),
-                TextButton(
-                  onPressed: () {},
-                  child: const Text(
-                    'See All',
-                    style: TextStyle(
-                      color: AppColors.primary,
-                      fontWeight: FontWeight.w600,
+              const SizedBox(height: 16),
+              SizedBox(
+                height: 100,
+                child: Center(
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    valueColor: AlwaysStoppedAnimation<Color>(
+                      AppColors.primary,
+                    ),
                     ),
                   ),
                 ),
               ],
             ),
-            const SizedBox(height: 12),
-            widget.isLoading
-                ? const SizedBox(
-                    height: 110,
-                    child: Center(child: CircularProgressIndicator()),
-                  )
-                : SizedBox(
-                    height: 110,
+        ),
+      );
+    }
+
+    if (widget.categories.isEmpty) {
+      return const SliverToBoxAdapter(child: SizedBox.shrink());
+    }
+
+    return SliverToBoxAdapter(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _SectionHeader(
+              title: 'Danh mục',
+              onSeeAll: () {},
+            ),
+            const SizedBox(height: 16),
+            SizedBox(
+              height: 100,
                     child: ListView.builder(
                       scrollDirection: Axis.horizontal,
                       itemCount: widget.categories.length,
                       itemBuilder: (context, index) {
                         final category = widget.categories[index];
                         final isSelected = _selectedCategoryIndex == index;
-                        // Dùng CategoryIconMapper để lấy icon và color dựa trên name
                         final iconData = CategoryIconMapper.getCategoryIcon(
                           category.name,
                         );
 
                         return Padding(
-                          padding: const EdgeInsets.only(right: 16),
+                    padding: EdgeInsets.only(
+                      right: index == widget.categories.length - 1 ? 0 : 16,
+                    ),
                           child: GestureDetector(
                             onTap: () {
                               setState(() {
@@ -95,6 +111,53 @@ class _CategorySectionState extends State<CategorySection> {
   }
 }
 
+class _SectionHeader extends StatelessWidget {
+  final String title;
+  final VoidCallback onSeeAll;
+
+  const _SectionHeader({
+    required this.title,
+    required this.onSeeAll,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        Text(
+          title,
+          style: const TextStyle(
+            fontSize: 22,
+            fontWeight: FontWeight.w600,
+            color: AppColors.textPrimary,
+            letterSpacing: -0.5,
+            height: 1.2,
+          ),
+        ),
+        TextButton(
+          onPressed: onSeeAll,
+          style: TextButton.styleFrom(
+            padding: EdgeInsets.zero,
+            minimumSize: Size.zero,
+            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+          ),
+          child: Text(
+            'Xem tất cả',
+            style: TextStyle(
+              color: AppColors.primary,
+              fontSize: 14,
+              fontWeight: FontWeight.w500,
+              letterSpacing: 0.1,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
 class CategoryItem extends StatelessWidget {
   final Category category;
   final bool isSelected;
@@ -112,33 +175,41 @@ class CategoryItem extends StatelessWidget {
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Container(
-          width: 70,
-          height: 70,
+        AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          curve: Curves.easeInOut,
+          width: 68,
+          height: 68,
           decoration: BoxDecoration(
-            color: isSelected ? AppColors.primary : Colors.white,
+            color: isSelected
+                ? AppColors.primary
+                : AppColors.primaryVeryLight.withOpacity(0.6),
             shape: BoxShape.circle,
             border: Border.all(
-              color: isSelected ? AppColors.primary : Colors.grey.shade300,
-              width: 2,
+              color: isSelected
+                  ? AppColors.primary
+                  : Colors.transparent,
+              width: 0,
             ),
           ),
           child: Icon(
             iconData['icon'] as IconData,
             color: isSelected ? Colors.white : AppColors.primary,
-            size: 32,
+            size: 30,
           ),
         ),
-        const SizedBox(height: 6),
+        const SizedBox(height: 8),
         SizedBox(
-          width: 80,
-          height: 32,
+          width: 72,
           child: Text(
             category.name,
             style: TextStyle(
               fontSize: 12,
-              fontWeight: FontWeight.w500,
-              color: isSelected ? AppColors.primary : AppColors.textSecondary,
+              fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
+              color: isSelected
+                  ? AppColors.primary
+                  : AppColors.textSecondary,
+              height: 1.3,
             ),
             textAlign: TextAlign.center,
             maxLines: 2,

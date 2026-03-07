@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import '../theme/app_colors.dart';
 
 class CategoryIconMapper {
@@ -78,13 +79,13 @@ class CategoryIconMapper {
 
     // 🐱 CAT (generic)
     if (name.contains('cat')) {
-      return {'icon': Icons.pets_rounded, 'color': AppColors.primary};
+      return {'icon': FontAwesomeIcons.cat, 'color': AppColors.primary};
     }
 
     // 🐶 DOG (generic)
     if (name.contains('dog')) {
       return {
-        'icon': Icons.pets_rounded,
+        'icon': FontAwesomeIcons.dog,
         'color': const Color(0xFF38A169), // Green 600
       };
     }
@@ -92,7 +93,7 @@ class CategoryIconMapper {
     // 🐦 BIRD
     if (name.contains('bird')) {
       return {
-        'icon': Icons.air_rounded,
+        'icon': FontAwesomeIcons.dove,
         'color': const Color(0xFF4299E1), // Blue 500
       };
     }
@@ -100,7 +101,7 @@ class CategoryIconMapper {
     // 🐠 FISH
     if (name.contains('fish')) {
       return {
-        'icon': Icons.water_drop_rounded,
+        'icon': FontAwesomeIcons.fish,
         'color': const Color(0xFF3182CE), // Blue 600
       };
     }
@@ -110,7 +111,7 @@ class CategoryIconMapper {
         name.contains('rabbit') ||
         name.contains('guinea')) {
       return {
-        'icon': Icons.pets_rounded,
+        'icon': FontAwesomeIcons.paw,
         'color': const Color(0xFFED8936), // Orange 500
       };
     }

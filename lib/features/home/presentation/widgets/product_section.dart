@@ -88,38 +88,50 @@ class _ProductSectionState extends State<ProductSection> {
   Widget build(BuildContext context) {
     return SliverToBoxAdapter(
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.fromLTRB(20, 20, 20, 32),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                const Text(
-                  'Best Selling Items',
-                  style: TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                    color: AppColors.textPrimary,
+            _SectionHeader(
+              title: 'Sản phẩm nổi bật',
+              onSeeAll: () {},
+            ),
+            const SizedBox(height: 16),
+            _isLoading && _products.isEmpty
+                ? SizedBox(
+                    height: 280,
+                    child: Center(
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        valueColor: AlwaysStoppedAnimation<Color>(
+                          AppColors.primary,
                   ),
                 ),
-                TextButton(
-                  onPressed: () {},
-                  child: const Text(
-                    'View All',
-                    style: TextStyle(
-                      color: AppColors.primary,
-                      fontWeight: FontWeight.w600,
                     ),
+                  )
+                : _products.isEmpty
+                    ? SizedBox(
+                        height: 200,
+                        child: Center(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(
+                                Icons.pets_outlined,
+                                size: 48,
+                                color: AppColors.textLight,
+                              ),
+                              const SizedBox(height: 12),
+                              Text(
+                                'Chưa có sản phẩm',
+                    style: TextStyle(
+                                  color: AppColors.textSecondary,
+                                  fontSize: 14,
                   ),
                 ),
               ],
             ),
-            const SizedBox(height: 12),
-            _isLoading && _products.isEmpty
-                ? const SizedBox(
-                    height: 200,
-                    child: Center(child: CircularProgressIndicator()),
+                        ),
                   )
                 : SizedBox(
                     height: 280,
@@ -128,9 +140,11 @@ class _ProductSectionState extends State<ProductSection> {
                       itemCount: _products.length + (_hasMore ? 1 : 0),
                       itemBuilder: (context, index) {
                         if (index == _products.length) {
-                          // Nút "Xem thêm"
                           return Padding(
-                            padding: const EdgeInsets.only(right: 16),
+                                padding: EdgeInsets.only(
+                                  right: 0,
+                                  left: index == 0 ? 0 : 16,
+                                ),
                             child: _LoadMoreButton(
                               isLoading: _isLoadingMore,
                               onTap: () => _loadProducts(loadMore: true),
@@ -139,8 +153,13 @@ class _ProductSectionState extends State<ProductSection> {
                         }
                         final product = _products[index];
                         return Padding(
-                          padding: const EdgeInsets.only(right: 16),
-                          child: BestSellingCard(product: product),
+                              padding: EdgeInsets.only(
+                                right: index == _products.length - 1 &&
+                                        !_hasMore
+                                    ? 0
+                                    : 16,
+                              ),
+                              child: ProductCard(product: product),
                         );
                       },
                     ),
@@ -148,6 +167,53 @@ class _ProductSectionState extends State<ProductSection> {
           ],
         ),
       ),
+    );
+  }
+}
+
+class _SectionHeader extends StatelessWidget {
+  final String title;
+  final VoidCallback onSeeAll;
+
+  const _SectionHeader({
+    required this.title,
+    required this.onSeeAll,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        Text(
+          title,
+          style: const TextStyle(
+            fontSize: 22,
+            fontWeight: FontWeight.w600,
+            color: AppColors.textPrimary,
+            letterSpacing: -0.5,
+            height: 1.2,
+          ),
+        ),
+        TextButton(
+          onPressed: onSeeAll,
+          style: TextButton.styleFrom(
+            padding: EdgeInsets.zero,
+            minimumSize: Size.zero,
+            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+          ),
+          child: Text(
+            'Xem tất cả',
+            style: TextStyle(
+              color: AppColors.primary,
+              fontSize: 14,
+              fontWeight: FontWeight.w500,
+              letterSpacing: 0.1,
+            ),
+          ),
+        ),
+      ],
     );
   }
 }
@@ -163,23 +229,19 @@ class _LoadMoreButton extends StatelessWidget {
     return GestureDetector(
       onTap: isLoading ? null : onTap,
       child: Container(
-        width: 160,
+        width: 168,
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: AppColors.primary, width: 2),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.05),
-              blurRadius: 10,
-              offset: const Offset(0, 2),
+          border: Border.all(
+            color: AppColors.primary.withOpacity(0.2),
+            width: 1.5,
             ),
-          ],
         ),
         child: Center(
           child: isLoading
-              ? const Padding(
-                  padding: EdgeInsets.all(16),
+              ? Padding(
+                  padding: const EdgeInsets.all(16),
                   child: CircularProgressIndicator(
                     strokeWidth: 2,
                     valueColor: AlwaysStoppedAnimation<Color>(
@@ -193,14 +255,14 @@ class _LoadMoreButton extends StatelessWidget {
                     Icon(
                       Icons.add_circle_outline,
                       color: AppColors.primary,
-                      size: 32,
+                      size: 28,
                     ),
                     const SizedBox(height: 8),
                     Text(
                       'Xem thêm',
                       style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w500,
                         color: AppColors.primary,
                       ),
                     ),
@@ -212,13 +274,16 @@ class _LoadMoreButton extends StatelessWidget {
   }
 }
 
-class BestSellingCard extends StatelessWidget {
+class ProductCard extends StatelessWidget {
   final Product product;
 
-  const BestSellingCard({super.key, required this.product});
+  const ProductCard({super.key, required this.product});
 
   String _formatPrice(double price) {
-    // Format theo VND: 168.000 đ
+    if (price <= 0) {
+      return 'Liên hệ';
+    }
+
     final priceInt = price.toInt();
     final priceString = priceInt.toString();
     final buffer = StringBuffer();
@@ -248,43 +313,35 @@ class BestSellingCard extends StatelessWidget {
         );
       },
       child: Container(
-        width: 160,
+        width: 168,
+        constraints: const BoxConstraints(
+          minHeight: 280,
+        ),
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(20),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.08),
-              blurRadius: 15,
-              offset: const Offset(0, 4),
-              spreadRadius: 0,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: AppColors.textLight.withOpacity(0.15),
+            width: 1,
             ),
-          ],
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
           children: [
-            // Product Image Section - Chiếm phần lớn cho ảnh đứng
-            Expanded(
-              flex: 4,
+            // Product Image Section
+            SizedBox(
+              height: 180,
               child: Stack(
                 children: [
-                  // Image Container
                   ClipRRect(
                     borderRadius: const BorderRadius.vertical(
-                      top: Radius.circular(20),
+                      top: Radius.circular(16),
                     ),
                     child: Container(
                       width: double.infinity,
                       decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          begin: Alignment.topCenter,
-                          end: Alignment.bottomCenter,
-                          colors: [
-                            AppColors.primaryVeryLight,
-                            AppColors.primaryVeryLight.withOpacity(0.3),
-                          ],
-                        ),
+                        color: AppColors.primaryVeryLight.withOpacity(0.5),
                       ),
                       child: hasImage
                           ? Image.network(
@@ -300,8 +357,7 @@ class BestSellingCard extends StatelessWidget {
                                       child: Center(
                                         child: CircularProgressIndicator(
                                           strokeWidth: 2,
-                                          value:
-                                              loadingProgress
+                                      value: loadingProgress
                                                       .expectedTotalBytes !=
                                                   null
                                               ? loadingProgress
@@ -310,9 +366,9 @@ class BestSellingCard extends StatelessWidget {
                                                         .expectedTotalBytes!
                                               : null,
                                           valueColor:
-                                              const AlwaysStoppedAnimation<
-                                                Color
-                                              >(AppColors.primary),
+                                          const AlwaysStoppedAnimation<Color>(
+                                        AppColors.primary,
+                                      ),
                                         ),
                                       ),
                                     );
@@ -327,63 +383,57 @@ class BestSellingCard extends StatelessWidget {
                   // Sale Badge
                   if (isOnSale)
                     Positioned(
-                      top: 10,
-                      left: 10,
+                      top: 8,
+                      left: 8,
                       child: Container(
                         padding: const EdgeInsets.symmetric(
-                          horizontal: 10,
-                          vertical: 5,
+                          horizontal: 8,
+                          vertical: 4,
                         ),
                         decoration: BoxDecoration(
                           color: AppColors.sale,
-                          borderRadius: BorderRadius.circular(14),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withOpacity(0.2),
-                              blurRadius: 4,
-                              offset: const Offset(0, 2),
-                            ),
-                          ],
+                          borderRadius: BorderRadius.circular(8),
                         ),
                         child: Text(
                           '-${product.discountPercent.toInt()}%',
                           style: const TextStyle(
                             color: Colors.white,
-                            fontSize: 12,
-                            fontWeight: FontWeight.bold,
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600,
+                            height: 1,
                           ),
                         ),
                       ),
                     ),
                   // Favorite Button
                   Positioned(
-                    top: 10,
-                    right: 10,
+                    top: 8,
+                    right: 8,
+                    child: Material(
+                      color: Colors.transparent,
+                      child: InkWell(
+                        onTap: () {
+                          // TODO: Implement favorite functionality
+                        },
+                        borderRadius: BorderRadius.circular(20),
                     child: Container(
-                      width: 36,
-                      height: 36,
+                          width: 32,
+                          height: 32,
                       decoration: BoxDecoration(
                         color: Colors.white.withOpacity(0.95),
                         shape: BoxShape.circle,
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.black.withOpacity(0.15),
-                            blurRadius: 6,
-                            offset: const Offset(0, 2),
+                                color: Colors.black.withOpacity(0.05),
+                                blurRadius: 4,
+                                offset: const Offset(0, 1),
                           ),
                         ],
                       ),
-                      child: Material(
-                        color: Colors.transparent,
-                        child: InkWell(
-                          onTap: () {
-                            // TODO: Implement favorite functionality
-                          },
-                          borderRadius: BorderRadius.circular(18),
-                          child: const Icon(
+                          child: Icon(
                             Icons.favorite_border,
-                            size: 20,
-                            color: AppColors.primary,
+                            size: 18,
+                            color: AppColors.textPrimary,
                           ),
                         ),
                       ),
@@ -392,9 +442,9 @@ class BestSellingCard extends StatelessWidget {
                 ],
               ),
             ),
-            // Product Info Section - Gọn gàng ở dưới
+            // Product Info Section
             Padding(
-              padding: const EdgeInsets.fromLTRB(12, 12, 12, 12),
+              padding: const EdgeInsets.all(14),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisSize: MainAxisSize.min,
@@ -403,10 +453,11 @@ class BestSellingCard extends StatelessWidget {
                   Text(
                     product.name,
                     style: const TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w500,
                       color: AppColors.textPrimary,
                       height: 1.3,
+                      letterSpacing: -0.1,
                     ),
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
@@ -415,14 +466,17 @@ class BestSellingCard extends StatelessWidget {
                   // Price Section
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
                     children: [
                       // Current Price
                       Text(
                         _formatPrice(product.finalPrice),
                         style: const TextStyle(
                           fontSize: 16,
-                          fontWeight: FontWeight.bold,
+                          fontWeight: FontWeight.w600,
                           color: AppColors.primary,
+                          letterSpacing: -0.2,
+                          height: 1.2,
                         ),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
@@ -434,9 +488,10 @@ class BestSellingCard extends StatelessWidget {
                           _formatPrice(product.price),
                           style: TextStyle(
                             fontSize: 12,
-                            fontWeight: FontWeight.w500,
+                            fontWeight: FontWeight.w400,
                             color: AppColors.textLight,
                             decoration: TextDecoration.lineThrough,
+                            height: 1.2,
                           ),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
@@ -457,19 +512,14 @@ class BestSellingCard extends StatelessWidget {
     return Container(
       width: double.infinity,
       height: double.infinity,
-      color: AppColors.primaryVeryLight,
+      color: AppColors.primaryVeryLight.withOpacity(0.5),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Icons.pets, size: 50, color: AppColors.primary.withOpacity(0.5)),
-          const SizedBox(height: 8),
-          Text(
-            'No Image',
-            style: TextStyle(
-              fontSize: 12,
-              color: AppColors.textLight,
-              fontWeight: FontWeight.w500,
-            ),
+          Icon(
+            Icons.pets,
+            size: 48,
+            color: AppColors.primary.withOpacity(0.4),
           ),
         ],
       ),

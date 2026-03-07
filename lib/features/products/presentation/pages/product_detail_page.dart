@@ -67,18 +67,24 @@ class _ProductDetailPageState extends ConsumerState<ProductDetailPage> {
           // App Bar
           SliverAppBar(
             pinned: true,
-            backgroundColor: Colors.white,
+            backgroundColor: AppColors.surface,
             elevation: 0,
+            surfaceTintColor: AppColors.surface,
             leading: Container(
               margin: const EdgeInsets.all(8),
               decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.9),
+                color: AppColors.surface,
                 shape: BoxShape.circle,
+                border: Border.all(
+                  color: AppColors.textLight.withOpacity(0.15),
+                  width: 1,
+                ),
               ),
               child: IconButton(
                 icon: const Icon(
-                  Icons.arrow_back,
+                  Icons.arrow_back_ios_new_rounded,
                   color: AppColors.textPrimary,
+                  size: 18,
                 ),
                 onPressed: () => Navigator.pop(context),
               ),
@@ -90,20 +96,18 @@ class _ProductDetailPageState extends ConsumerState<ProductDetailPage> {
               Container(
                 margin: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.9),
+                  color: AppColors.surface,
                   shape: BoxShape.circle,
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.1),
-                      blurRadius: 4,
-                      offset: const Offset(0, 2),
-                    ),
-                  ],
+                  border: Border.all(
+                    color: AppColors.textLight.withOpacity(0.15),
+                    width: 1,
+                  ),
                 ),
                 child: IconButton(
                   icon: const Icon(
-                    Icons.favorite_border,
+                    Icons.favorite_outline_rounded,
                     color: AppColors.textPrimary,
+                    size: 20,
                   ),
                   onPressed: () {
                     // TODO: Add to favorites
@@ -116,21 +120,21 @@ class _ProductDetailPageState extends ConsumerState<ProductDetailPage> {
           // Product Images - Main image left, thumbnails right (at the top)
           SliverToBoxAdapter(
             child: Container(
-              color: Colors.white,
+              color: AppColors.surface,
               padding: const EdgeInsets.only(
-                left: 8,
-                right: 0,
-                top: 16,
-                bottom: 16,
+                left: 20,
+                right: 20,
+                top: 20,
+                bottom: 20,
               ),
               child: LayoutBuilder(
                 builder: (context, constraints) {
                   final screenWidth = constraints.maxWidth;
-                  final paddingLeft = 8.0;
-                  final paddingRight = 0;
+                  final paddingLeft = 0.0;
+                  final paddingRight = 0.0;
                   final spacing =
                       12.0; // spacing between main image and thumbnails
-                  final thumbnailWidth = 80.0;
+                  final thumbnailWidth = 72.0;
                   final availableWidth =
                       screenWidth -
                       paddingLeft -
@@ -158,10 +162,14 @@ class _ProductDetailPageState extends ConsumerState<ProductDetailPage> {
                         child: Container(
                           decoration: BoxDecoration(
                             color: AppColors.primaryVeryLight,
-                            borderRadius: BorderRadius.circular(16),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                              color: AppColors.textLight.withOpacity(0.1),
+                              width: 1,
+                            ),
                           ),
                           child: ClipRRect(
-                            borderRadius: BorderRadius.circular(16),
+                            borderRadius: BorderRadius.circular(12),
                             child: product.images.isNotEmpty
                                 ? Image.network(
                                     product.images[_selectedImageIndex],
@@ -235,22 +243,18 @@ class _ProductDetailPageState extends ConsumerState<ProductDetailPage> {
                                         width: thumbnailWidth,
                                         height: thumbnailHeight,
                                         decoration: BoxDecoration(
-                                          borderRadius: BorderRadius.circular(
-                                            12,
-                                          ),
+                                          borderRadius: BorderRadius.circular(10),
                                           border: Border.all(
                                             color: _selectedImageIndex == index
                                                 ? AppColors.primary
-                                                : AppColors.textLight,
+                                                : AppColors.textLight.withOpacity(0.2),
                                             width: _selectedImageIndex == index
                                                 ? 2
                                                 : 1,
                                           ),
                                         ),
                                         child: ClipRRect(
-                                          borderRadius: BorderRadius.circular(
-                                            11,
-                                          ),
+                                          borderRadius: BorderRadius.circular(9),
                                           child: Image.network(
                                             imageUrl!,
                                             fit: BoxFit.cover,
@@ -297,10 +301,10 @@ class _ProductDetailPageState extends ConsumerState<ProductDetailPage> {
                                       width: thumbnailWidth,
                                       height: thumbnailHeight,
                                       decoration: BoxDecoration(
-                                        borderRadius: BorderRadius.circular(12),
+                                        borderRadius: BorderRadius.circular(10),
                                         border: Border.all(
                                           color: AppColors.textLight
-                                              .withOpacity(0.3),
+                                              .withOpacity(0.15),
                                           width: 1,
                                         ),
                                         color: Colors.transparent,
@@ -320,12 +324,12 @@ class _ProductDetailPageState extends ConsumerState<ProductDetailPage> {
           // Product Info
           SliverToBoxAdapter(
             child: Container(
-              color: Colors.white,
+              color: AppColors.surface,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Padding(
-                    padding: const EdgeInsets.all(16),
+                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -333,72 +337,80 @@ class _ProductDetailPageState extends ConsumerState<ProductDetailPage> {
                         if (product.isOnSale)
                           Container(
                             padding: const EdgeInsets.symmetric(
-                              horizontal: 12,
-                              vertical: 6,
+                              horizontal: 10,
+                              vertical: 5,
                             ),
                             decoration: BoxDecoration(
                               color: AppColors.saleBackground,
-                              borderRadius: BorderRadius.circular(8),
+                              borderRadius: BorderRadius.circular(6),
                             ),
                             child: Text(
                               'Giảm ${product.discountPercent.toInt()}%',
                               style: const TextStyle(
                                 color: AppColors.sale,
-                                fontSize: 12,
-                                fontWeight: FontWeight.bold,
+                                fontSize: 11,
+                                fontWeight: FontWeight.w600,
+                                letterSpacing: 0.1,
                               ),
                             ),
                           ),
-                        const SizedBox(height: 12),
+                        if (product.isOnSale) const SizedBox(height: 12),
                         Text(
                           product.name,
                           style: const TextStyle(
-                            fontSize: 24,
-                            fontWeight: FontWeight.bold,
+                            fontSize: 26,
+                            fontWeight: FontWeight.w600,
                             color: AppColors.textPrimary,
+                            letterSpacing: -0.4,
+                            height: 1.2,
                           ),
                         ),
-                        const SizedBox(height: 8),
+                        const SizedBox(height: 10),
                         Row(
                           children: [
                             Text(
                               product.brand.name,
                               style: const TextStyle(
-                                fontSize: 16,
+                                fontSize: 15,
                                 color: AppColors.textSecondary,
+                                fontWeight: FontWeight.w500,
                               ),
                             ),
-                            const SizedBox(width: 16),
+                            const SizedBox(width: 12),
                             Container(
                               padding: const EdgeInsets.symmetric(
-                                horizontal: 8,
-                                vertical: 4,
+                                horizontal: 10,
+                                vertical: 5,
                               ),
                               decoration: BoxDecoration(
                                 color: AppColors.primaryVeryLight,
-                                borderRadius: BorderRadius.circular(8),
+                                borderRadius: BorderRadius.circular(6),
                               ),
                               child: Text(
                                 product.petType ?? 'Chó, Mèo',
                                 style: const TextStyle(
-                                  fontSize: 12,
+                                  fontSize: 11,
                                   color: AppColors.primary,
-                                  fontWeight: FontWeight.w500,
+                                  fontWeight: FontWeight.w600,
+                                  letterSpacing: 0.1,
                                 ),
                               ),
                             ),
                           ],
                         ),
-                        const SizedBox(height: 16),
+                        const SizedBox(height: 20),
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          crossAxisAlignment: CrossAxisAlignment.end,
                           children: [
                             Text(
                               _formatPrice(_currentPrice),
                               style: const TextStyle(
-                                fontSize: 28,
-                                fontWeight: FontWeight.bold,
+                                fontSize: 30,
+                                fontWeight: FontWeight.w700,
                                 color: AppColors.primary,
+                                letterSpacing: -0.5,
+                                height: 1.0,
                               ),
                             ),
                             if (_selectedSize != null)
@@ -407,8 +419,9 @@ class _ProductDetailPageState extends ConsumerState<ProductDetailPage> {
                                     ? 'Tồn kho: ${_selectedSize!.stockQuantity}'
                                     : 'Tồn kho: 0',
                                 style: const TextStyle(
-                                  fontSize: 14,
+                                  fontSize: 13,
                                   color: AppColors.textSecondary,
+                                  fontWeight: FontWeight.w500,
                                 ),
                               ),
                           ],
@@ -417,15 +430,15 @@ class _ProductDetailPageState extends ConsumerState<ProductDetailPage> {
                         Row(
                           children: [
                             const Icon(
-                              Icons.star,
+                              Icons.star_rounded,
                               color: AppColors.rating,
-                              size: 20,
+                              size: 18,
                             ),
                             const SizedBox(width: 4),
                             const Text(
                               '4.8',
                               style: TextStyle(
-                                fontSize: 16,
+                                fontSize: 15,
                                 fontWeight: FontWeight.w600,
                                 color: AppColors.textPrimary,
                               ),
@@ -434,7 +447,7 @@ class _ProductDetailPageState extends ConsumerState<ProductDetailPage> {
                             Text(
                               '(${product.soldCount ?? 0} đã bán)',
                               style: const TextStyle(
-                                fontSize: 14,
+                                fontSize: 13,
                                 color: AppColors.textSecondary,
                               ),
                             ),
@@ -442,19 +455,20 @@ class _ProductDetailPageState extends ConsumerState<ProductDetailPage> {
                         ),
                         // Size selector
                         if (product.productSizes.isNotEmpty) ...[
-                          const SizedBox(height: 24),
+                          const SizedBox(height: 28),
                           const Text(
-                            'Select Size:',
+                            'Kích thước',
                             style: TextStyle(
-                              fontSize: 16,
+                              fontSize: 15,
                               fontWeight: FontWeight.w600,
                               color: AppColors.textPrimary,
+                              letterSpacing: -0.1,
                             ),
                           ),
                           const SizedBox(height: 12),
                           Wrap(
-                            spacing: 12,
-                            runSpacing: 12,
+                            spacing: 10,
+                            runSpacing: 10,
                             children: product.productSizes
                                 .where((ps) => ps.isActive)
                                 .map((productSize) {
@@ -470,25 +484,26 @@ class _ProductDetailPageState extends ConsumerState<ProductDetailPage> {
                                               _selectedSize = productSize;
                                             });
                                           },
-                                    child: Container(
-                                      width: 60,
-                                      height: 60,
+                                    child: AnimatedContainer(
+                                      duration: const Duration(milliseconds: 200),
+                                      width: 56,
+                                      height: 56,
                                       decoration: BoxDecoration(
                                         color: isSelected
                                             ? AppColors.primary
                                             : (isOutOfStock
                                                   ? AppColors.primaryVeryLight
-                                                  : Colors.white),
+                                                  : AppColors.surface),
                                         border: Border.all(
                                           color: isSelected
                                               ? AppColors.primary
                                               : (isOutOfStock
                                                     ? AppColors.textLight
-                                                          .withOpacity(0.3)
-                                                    : AppColors.textLight),
+                                                          .withOpacity(0.2)
+                                                    : AppColors.textLight.withOpacity(0.25)),
                                           width: isSelected ? 2 : 1,
                                         ),
-                                        borderRadius: BorderRadius.circular(12),
+                                        borderRadius: BorderRadius.circular(10),
                                       ),
                                       child: Center(
                                         child: Text(
@@ -501,6 +516,7 @@ class _ProductDetailPageState extends ConsumerState<ProductDetailPage> {
                                                 : (isOutOfStock
                                                       ? AppColors.textLight
                                                       : AppColors.textPrimary),
+                                            letterSpacing: -0.1,
                                           ),
                                         ),
                                       ),
@@ -514,48 +530,64 @@ class _ProductDetailPageState extends ConsumerState<ProductDetailPage> {
                     ),
                   ),
 
-                  const Divider(height: 32),
+                  Divider(
+                    height: 1,
+                    thickness: 1,
+                    color: AppColors.textLight.withOpacity(0.1),
+                    indent: 20,
+                    endIndent: 20,
+                  ),
 
                   // Description
                   Padding(
-                    padding: const EdgeInsets.all(16),
+                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         const Text(
-                          'Mô Tả Sản Phẩm',
+                          'Mô tả sản phẩm',
                           style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
+                            fontSize: 17,
+                            fontWeight: FontWeight.w600,
                             color: AppColors.textPrimary,
+                            letterSpacing: -0.2,
                           ),
                         ),
                         const SizedBox(height: 12),
                         Text(
                           product.description,
                           style: const TextStyle(
-                            fontSize: 14,
+                            fontSize: 15,
                             color: AppColors.textSecondary,
-                            height: 1.6,
+                            height: 1.5,
+                            letterSpacing: 0.1,
                           ),
                         ),
-                        const SizedBox(height: 24),
-                        Row(
-                          children: [
-                            const Icon(
-                              Icons.inventory_2,
-                              color: AppColors.primary,
-                              size: 20,
-                            ),
-                            const SizedBox(width: 8),
-                            Text(
-                              'Còn ${product.stockQuantity} sản phẩm',
-                              style: const TextStyle(
-                                fontSize: 14,
-                                color: AppColors.textSecondary,
+                        const SizedBox(height: 20),
+                        Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: AppColors.primaryVeryLight,
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: Row(
+                            children: [
+                              const Icon(
+                                Icons.inventory_2_outlined,
+                                color: AppColors.primary,
+                                size: 18,
                               ),
-                            ),
-                          ],
+                              const SizedBox(width: 8),
+                              Text(
+                                'Còn ${product.stockQuantity} sản phẩm',
+                                style: const TextStyle(
+                                  fontSize: 13,
+                                  color: AppColors.primaryDark,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
                       ],
                     ),
@@ -569,16 +601,15 @@ class _ProductDetailPageState extends ConsumerState<ProductDetailPage> {
 
       // Bottom bar với quantity và add to cart
       bottomNavigationBar: Container(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
         decoration: BoxDecoration(
-          color: Colors.white,
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.05),
-              blurRadius: 10,
-              offset: const Offset(0, -2),
+          color: AppColors.surface,
+          border: Border(
+            top: BorderSide(
+              color: AppColors.textLight.withOpacity(0.12),
+              width: 1,
             ),
-          ],
+          ),
         ),
         child: SafeArea(
           child: Row(
@@ -586,13 +617,18 @@ class _ProductDetailPageState extends ConsumerState<ProductDetailPage> {
               // Quantity selector
               Container(
                 decoration: BoxDecoration(
-                  border: Border.all(color: AppColors.textLight),
-                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: AppColors.textLight.withOpacity(0.25),
+                    width: 1,
+                  ),
+                  borderRadius: BorderRadius.circular(10),
                 ),
                 child: Row(
+                  mainAxisSize: MainAxisSize.min,
                   children: [
                     IconButton(
-                      icon: const Icon(Icons.remove, size: 20),
+                      icon: const Icon(Icons.remove_rounded, size: 18),
+                      color: AppColors.textPrimary,
                       onPressed: _quantity > 1
                           ? () {
                               setState(() {
@@ -602,18 +638,20 @@ class _ProductDetailPageState extends ConsumerState<ProductDetailPage> {
                           : null,
                     ),
                     SizedBox(
-                      width: 40,
+                      width: 36,
                       child: Text(
                         '$_quantity',
                         textAlign: TextAlign.center,
                         style: const TextStyle(
-                          fontSize: 16,
+                          fontSize: 15,
                           fontWeight: FontWeight.w600,
+                          color: AppColors.textPrimary,
                         ),
                       ),
                     ),
                     IconButton(
-                      icon: const Icon(Icons.add, size: 20),
+                      icon: const Icon(Icons.add_rounded, size: 18),
+                      color: AppColors.textPrimary,
                       onPressed:
                           _selectedSize != null &&
                               _quantity < _selectedSize!.stockQuantity
@@ -631,6 +669,15 @@ class _ProductDetailPageState extends ConsumerState<ProductDetailPage> {
               // Add to cart button
               Expanded(
                 child: ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primary,
+                    foregroundColor: Colors.white,
+                    elevation: 0,
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                  ),
                   onPressed: _isAddingToCart
                       ? null
                       : () async {
@@ -713,9 +760,6 @@ class _ProductDetailPageState extends ConsumerState<ProductDetailPage> {
                             }
                           }
                         },
-                  style: ElevatedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                  ),
                   child: _isAddingToCart
                       ? const SizedBox(
                           width: 20,
@@ -727,7 +771,14 @@ class _ProductDetailPageState extends ConsumerState<ProductDetailPage> {
                             ),
                           ),
                         )
-                      : const Text('Thêm Vào Giỏ'),
+                      : const Text(
+                          'Thêm vào giỏ',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                            letterSpacing: 0.1,
+                          ),
+                        ),
                 ),
               ),
             ],
@@ -749,27 +800,25 @@ class _CartIconWithBadge extends ConsumerWidget {
       future: UserStorage.getUserId(),
       builder: (context, snapshot) {
         if (!snapshot.hasData || snapshot.data == null) {
-          return Container(
-            margin: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.9),
-              shape: BoxShape.circle,
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.1),
-                  blurRadius: 4,
-                  offset: const Offset(0, 2),
-                ),
-              ],
+        return Container(
+          margin: const EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            color: AppColors.surface,
+            shape: BoxShape.circle,
+            border: Border.all(
+              color: AppColors.textLight.withOpacity(0.15),
+              width: 1,
             ),
-            child: IconButton(
-              icon: const Icon(
-                Icons.shopping_cart_outlined,
-                color: AppColors.textPrimary,
-              ),
-              onPressed: () {},
+          ),
+          child: IconButton(
+            icon: const Icon(
+              Icons.shopping_cart_outlined,
+              color: AppColors.textPrimary,
+              size: 20,
             ),
-          );
+            onPressed: () {},
+          ),
+        );
         }
 
         final userId = snapshot.data!;
@@ -778,15 +827,12 @@ class _CartIconWithBadge extends ConsumerWidget {
         return Container(
           margin: const EdgeInsets.all(8),
           decoration: BoxDecoration(
-            color: Colors.white.withOpacity(0.9),
+            color: AppColors.surface,
             shape: BoxShape.circle,
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.1),
-                blurRadius: 4,
-                offset: const Offset(0, 2),
-              ),
-            ],
+            border: Border.all(
+              color: AppColors.textLight.withOpacity(0.15),
+              width: 1,
+            ),
           ),
           child: Stack(
             clipBehavior: Clip.none,
@@ -795,6 +841,7 @@ class _CartIconWithBadge extends ConsumerWidget {
                 icon: const Icon(
                   Icons.shopping_cart_outlined,
                   color: AppColors.textPrimary,
+                  size: 20,
                 ),
                 onPressed: () {
                   Navigator.push(
