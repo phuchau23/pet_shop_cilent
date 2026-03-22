@@ -5,6 +5,9 @@ import 'package:latlong2/latlong.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/storage/store_storage.dart';
 import '../../../../core/network/api_client.dart';
+import '../../../../core/services/location_service.dart';
+import '../../../locations/presentation/providers/location_provider.dart';
+import '../../data/services/gps_address_resolver.dart';
 import '../../../cart/domain/entities/cart_item.dart';
 import '../../../products/presentation/pages/product_detail_page.dart';
 import '../../../auth/data/datasources/remote/auth_remote_data_source.dart';
@@ -12,11 +15,11 @@ import '../../domain/entities/address_result.dart';
 import '../../data/models/estimate_delivery_request_dto.dart';
 import '../../data/models/estimate_delivery_response_dto.dart';
 import '../../data/models/validate_voucher_request_dto.dart';
-import '../../data/models/voucher_response_dto.dart';
 import '../../data/models/create_order_request_dto.dart';
 import '../../data/datasources/remote/order_remote_data_source.dart';
 import 'address_selection_page.dart';
 import 'order_tracking_page.dart';
+import '../widgets/checkout_voucher_sheet.dart';
 
 class OrderOverviewPage extends ConsumerStatefulWidget {
   final List<CartItem> selectedItems;
@@ -46,13 +49,13 @@ class _OrderOverviewPageState extends ConsumerState<OrderOverviewPage> {
   double? _deliveryFee; // ⭐ Phí ship từ API
 
   // Voucher
-  VoucherResponseDto? _voucher;
-  double _voucherDiscount = 0; // ⭐ Discount từ API
-  bool _isValidatingVoucher = false;
+  double _voucherDiscount = 0; // ⭐ Discount từ API (preview; BE tính lại khi đặt)
   String? _voucherError;
 
   // Create order
   bool _isCreatingOrder = false;
+
+  bool _loadingGpsAddress = false;
 
   // Payment method: 1 = COD, 2 = VN-Pay
   int _selectedPaymentMethod = 1; // Mặc định COD
@@ -76,6 +79,68 @@ class _OrderOverviewPageState extends ConsumerState<OrderOverviewPage> {
   }
 
   Future<void> _selectAddress() async {
+    final choice = await showModalBottomSheet<String>(
+      context: context,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 36,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade300,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              const SizedBox(height: 16),
+              const Text(
+                'Chọn địa chỉ giao hàng',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.textPrimary,
+                ),
+              ),
+              const SizedBox(height: 20),
+              _LocationOption(
+                icon: Icons.my_location_rounded,
+                iconColor: AppColors.primaryDark,
+                iconBg: AppColors.primaryVeryLight,
+                title: 'Dùng vị trí hiện tại',
+                subtitle: 'Tự động điền địa chỉ từ GPS',
+                onTap: () => Navigator.pop(ctx, 'gps'),
+              ),
+              const SizedBox(height: 12),
+              _LocationOption(
+                icon: Icons.edit_location_alt_rounded,
+                iconColor: AppColors.textSecondary,
+                iconBg: Colors.grey.shade100,
+                title: 'Nhập thủ công',
+                subtitle: 'Chọn Tỉnh / Quận / Phường trên bản đồ',
+                onTap: () => Navigator.pop(ctx, 'manual'),
+              ),
+              const SizedBox(height: 8),
+            ],
+          ),
+        ),
+      ),
+    );
+
+    if (choice == 'gps') {
+      await _useCurrentLocationAddress();
+    } else if (choice == 'manual') {
+      await _openAddressSelectionPage();
+    }
+  }
+
+  Future<void> _openAddressSelectionPage() async {
     final result = await Navigator.push<AddressResult>(
       context,
       MaterialPageRoute(
@@ -83,21 +148,77 @@ class _OrderOverviewPageState extends ConsumerState<OrderOverviewPage> {
             AddressSelectionPage(initialAddress: _selectedAddressResult),
       ),
     );
-
     if (result != null) {
       setState(() {
         _selectedAddressResult = result;
         _selectedAddress = result.fullAddress;
         _routePolyline = null;
       });
-
-      // Nếu có delivery estimate, cập nhật thông tin từ BE
       if (result.deliveryEstimate != null) {
         _updateRouteFromEstimate(result.deliveryEstimate!);
       } else {
-        // Nếu chưa có estimate, call API để lấy route từ BE
         await _estimateDelivery(result.latitude, result.longitude);
       }
+    }
+  }
+
+  Future<void> _useCurrentLocationAddress() async {
+    setState(() => _loadingGpsAddress = true);
+    try {
+      final pos = await LocationService.getCurrentLocation();
+      if (!mounted) return;
+      if (pos == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Không lấy được vị trí. Bật GPS và cấp quyền.'),
+            backgroundColor: AppColors.error,
+          ),
+        );
+        return;
+      }
+
+      final provinces = await ref.read(provincesProvider.future);
+      final getDistricts = ref.read(getDistrictsUseCaseProvider);
+      final getWards = ref.read(getWardsUseCaseProvider);
+
+      final resolved = await GpsAddressResolver.resolve(
+        latitude: pos.latitude,
+        longitude: pos.longitude,
+        provinces: provinces,
+        loadDistricts: (code) => getDistricts(code),
+        loadWards: (code) => getWards(code),
+      );
+
+      if (!mounted) return;
+
+      // Dù resolve thành công hay thất bại, vẫn dùng lat/lng GPS để estimate
+      final addressResult = resolved ?? AddressResult(
+        provinceName: '',
+        districtName: '',
+        wardName: '',
+        fullAddress: 'Vị trí hiện tại (${pos.latitude.toStringAsFixed(5)}, ${pos.longitude.toStringAsFixed(5)})',
+        latitude: pos.latitude,
+        longitude: pos.longitude,
+        provinceCode: 0,
+        districtCode: 0,
+        wardCode: 0,
+      );
+
+      setState(() {
+        _selectedAddressResult = addressResult;
+        _selectedAddress = addressResult.fullAddress;
+        _routePolyline = null;
+      });
+
+      await _estimateDelivery(addressResult.latitude, addressResult.longitude);
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Lỗi GPS: $e'), backgroundColor: AppColors.error),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _loadingGpsAddress = false);
     }
   }
 
@@ -186,21 +307,19 @@ class _OrderOverviewPageState extends ConsumerState<OrderOverviewPage> {
     }
   }
 
-  /// Validate voucher qua API
-  Future<void> _validateVoucher(String code) async {
+  /// Validate voucher qua API. Trả về `null` nếu OK; chuỗi lỗi nếu thất bại.
+  Future<String?> _validateVoucher(String code) async {
     if (code.trim().isEmpty) {
       setState(() {
-        _voucher = null;
         _voucherDiscount = 0;
         _selectedVoucher = null;
         _voucherError = null;
       });
-      return;
+      return null;
     }
 
     try {
       setState(() {
-        _isValidatingVoucher = true;
         _voucherError = null;
       });
 
@@ -227,32 +346,20 @@ class _OrderOverviewPageState extends ConsumerState<OrderOverviewPage> {
       }
 
       setState(() {
-        _voucher = voucher;
         _voucherDiscount = discount;
         _selectedVoucher = voucher.code;
         _voucherError = null;
       });
+      return null;
     } catch (e) {
       print('❌ Error validating voucher: $e');
+      final msg = e.toString().replaceFirst('Exception: ', '');
       setState(() {
-        _voucher = null;
         _voucherDiscount = 0;
         _selectedVoucher = null;
-        _voucherError = e.toString();
+        _voucherError = msg;
       });
-
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Lỗi voucher: ${e.toString()}'),
-            backgroundColor: AppColors.error,
-          ),
-        );
-      }
-    } finally {
-      setState(() {
-        _isValidatingVoucher = false;
-      });
+      return msg;
     }
   }
 
@@ -560,60 +667,59 @@ class _OrderOverviewPageState extends ConsumerState<OrderOverviewPage> {
             ),
           ),
           const SizedBox(height: 12),
-          GestureDetector(
-            onTap: _selectAddress,
-            child: Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                border: Border.all(
-                  color: _selectedAddress == null
-                      ? AppColors.textLight
-                      : AppColors.primary,
-                  width: 1.5,
+          SizedBox(
+            height: 48,
+            width: double.infinity,
+            child: FilledButton.icon(
+              onPressed: _selectAddress,
+              style: FilledButton.styleFrom(
+                backgroundColor: AppColors.primary,
+                foregroundColor: AppColors.textPrimary,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
                 ),
+              ),
+              icon: const Icon(Icons.location_on_rounded, size: 22),
+              label: const Text(
+                'Chọn vị trí nhận hàng',
+                style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
+              ),
+            ),
+          ),
+          if (_selectedAddress != null) ...[
+            const SizedBox(height: 14),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: AppColors.primaryVeryLight,
                 borderRadius: BorderRadius.circular(12),
-                color: _selectedAddress == null
-                    ? Colors.grey.shade50
-                    : AppColors.primaryVeryLight,
+                border: Border.all(color: AppColors.primary.withOpacity(0.25)),
               ),
               child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Icon(
-                    Icons.location_on_outlined,
-                    color: _selectedAddress == null
-                        ? AppColors.textSecondary
-                        : AppColors.primary,
-                    size: 24,
+                  const Icon(
+                    Icons.check_circle_outline_rounded,
+                    color: AppColors.primaryDark,
+                    size: 22,
                   ),
-                  const SizedBox(width: 12),
+                  const SizedBox(width: 10),
                   Expanded(
-                    child: _selectedAddress == null
-                        ? const Text(
-                            'Chọn địa chỉ nhận hàng',
-                            style: TextStyle(
-                              fontSize: 14,
-                              color: AppColors.textSecondary,
-                            ),
-                          )
-                        : Text(
-                            _selectedAddress!,
-                            style: const TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w600,
-                              color: AppColors.textPrimary,
-                            ),
-                          ),
-                  ),
-                  Icon(
-                    Icons.chevron_right,
-                    color: _selectedAddress == null
-                        ? AppColors.textSecondary
-                        : AppColors.primary,
+                    child: Text(
+                      _selectedAddress!,
+                      style: const TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        height: 1.35,
+                        color: AppColors.textPrimary,
+                      ),
+                    ),
                   ),
                 ],
               ),
             ),
-          ),
+          ],
         ],
       ),
     );
@@ -1404,112 +1510,108 @@ class _OrderOverviewPageState extends ConsumerState<OrderOverviewPage> {
     );
   }
 
-  /// Show dialog để nhập voucher code
   void _showVoucherDialog() {
-    final voucherController = TextEditingController(
-      text: _selectedVoucher ?? '',
-    );
-
-    showDialog(
+    showModalBottomSheet<void>(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Nhập mã voucher'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(
-              controller: voucherController,
-              decoration: InputDecoration(
-                hintText: 'Nhập mã voucher',
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                errorText: _voucherError,
-              ),
-              textCapitalization: TextCapitalization.characters,
-            ),
-            if (_voucher != null) ...[
-              const SizedBox(height: 16),
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: AppColors.primaryVeryLight,
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      _voucher!.name,
-                      style: const TextStyle(
-                        fontWeight: FontWeight.bold,
-                        color: AppColors.primary,
-                      ),
-                    ),
-                    if (_voucher!.description != null) ...[
-                      const SizedBox(height: 4),
-                      Text(
-                        _voucher!.description!,
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: Colors.grey.shade600,
-                        ),
-                      ),
-                    ],
-                  ],
-                ),
-              ),
-            ],
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () {
-              // Xóa voucher
+      isScrollControlled: true,
+      backgroundColor: Theme.of(context).colorScheme.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (sheetContext) {
+        return Padding(
+          padding: EdgeInsets.only(
+            bottom: MediaQuery.of(sheetContext).viewInsets.bottom,
+          ),
+          child: CheckoutVoucherSheet(
+            orderSubTotal: _subTotal,
+            initialCode: _selectedVoucher,
+            initialFieldError: _voucherError,
+            onValidateCode: _validateVoucher,
+            onClearSelection: () {
               setState(() {
-                _voucher = null;
                 _voucherDiscount = 0;
                 _selectedVoucher = null;
                 _voucherError = null;
               });
-              Navigator.of(context).pop();
             },
-            child: const Text('Xóa'),
           ),
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Hủy'),
-          ),
-          ElevatedButton(
-            onPressed: _isValidatingVoucher
-                ? null
-                : () async {
-                    final code = voucherController.text.trim();
-                    if (code.isEmpty) {
-                      setState(() {
-                        _voucher = null;
-                        _voucherDiscount = 0;
-                        _selectedVoucher = null;
-                        _voucherError = null;
-                      });
-                      Navigator.of(context).pop();
-                      return;
-                    }
+        );
+      },
+    );
+  }
+}
 
-                    await _validateVoucher(code);
-                    if (mounted && _voucherError == null) {
-                      Navigator.of(context).pop();
-                    }
-                  },
-            child: _isValidatingVoucher
-                ? const SizedBox(
-                    height: 16,
-                    width: 16,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  )
-                : const Text('Áp dụng'),
+class _LocationOption extends StatelessWidget {
+  final IconData icon;
+  final Color iconColor;
+  final Color iconBg;
+  final String title;
+  final String subtitle;
+  final VoidCallback onTap;
+
+  const _LocationOption({
+    required this.icon,
+    required this.iconColor,
+    required this.iconBg,
+    required this.title,
+    required this.subtitle,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(14),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(14),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: Colors.grey.shade200),
           ),
-        ],
+          child: Row(
+            children: [
+              Container(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(
+                  color: iconBg,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(icon, color: iconColor, size: 22),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: const TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.textPrimary,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      subtitle,
+                      style: const TextStyle(
+                        fontSize: 12,
+                        color: AppColors.textSecondary,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const Icon(Icons.chevron_right, color: AppColors.textLight, size: 20),
+            ],
+          ),
+        ),
       ),
     );
   }

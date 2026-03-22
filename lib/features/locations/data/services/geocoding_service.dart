@@ -2,6 +2,61 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:latlong2/latlong.dart';
 
+/// Thành phần địa chỉ từ Nominatim (reverse).
+class OsmAddressParts {
+  final String? houseNumber;
+  final String? road;
+  final String? suburb;
+  final String? quarter;
+  final String? neighbourhood;
+  final String? cityDistrict;
+  final String? city;
+  final String? town;
+  final String? county;
+  final String? state;
+
+  const OsmAddressParts({
+    this.houseNumber,
+    this.road,
+    this.suburb,
+    this.quarter,
+    this.neighbourhood,
+    this.cityDistrict,
+    this.city,
+    this.town,
+    this.county,
+    this.state,
+  });
+
+  static OsmAddressParts? fromNominatimMap(Map<String, dynamic>? address) {
+    if (address == null) return null;
+    String? s(String k) => address[k] as String?;
+    return OsmAddressParts(
+      houseNumber: s('house_number'),
+      road: s('road'),
+      suburb: s('suburb'),
+      quarter: s('quarter'),
+      neighbourhood: s('neighbourhood'),
+      cityDistrict: s('city_district'),
+      city: s('city'),
+      town: s('town'),
+      county: s('county'),
+      state: s('state'),
+    );
+  }
+
+  String get streetLine {
+    final h = houseNumber?.trim();
+    final r = road?.trim();
+    if (h != null && h.isNotEmpty && r != null && r.isNotEmpty) {
+      return '$h $r';
+    }
+    if (r != null && r.isNotEmpty) return r;
+    if (h != null && h.isNotEmpty) return h;
+    return '';
+  }
+}
+
 class GeocodingService {
   // Nominatim API của OpenStreetMap (miễn phí, không cần API key)
   static const String _baseUrl = 'https://nominatim.openstreetmap.org';
@@ -204,7 +259,27 @@ out geom;
       return null;
     }
   }
-  
+
+  /// Reverse geocode chi tiết (để ghép mã tỉnh/huyện/xã).
+  static Future<OsmAddressParts?> reverseGeocodeDetail(LatLng coordinates) async {
+    try {
+      final url = Uri.parse(
+        '$_baseUrl/reverse?lat=${coordinates.latitude}&lon=${coordinates.longitude}&format=json&addressdetails=1',
+      );
+      final response = await http.get(
+        url,
+        headers: {'User-Agent': 'PetShopApp/1.0'},
+      );
+      if (response.statusCode != 200) return null;
+      final data = json.decode(response.body) as Map<String, dynamic>;
+      final address = data['address'] as Map<String, dynamic>?;
+      return OsmAddressParts.fromNominatimMap(address);
+    } catch (e) {
+      print('❌ reverseGeocodeDetail error: $e');
+      return null;
+    }
+  }
+
   /// Geocode địa chỉ cụ thể (có số nhà, tên đường)
   static Future<LatLng?> geocodeSpecificAddress({
     required String specificAddress,

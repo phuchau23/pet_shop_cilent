@@ -1,6 +1,8 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:http/http.dart' as http;
 import 'package:latlong2/latlong.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../../../core/network/api_client.dart';
@@ -9,6 +11,7 @@ import '../../../../features/shipper/data/datasources/remote/shipper_remote_data
 import '../../../../features/shipper/data/models/shipper_order_response_dto.dart';
 import '../../../../features/shipper/data/models/update_shipper_status_request_dto.dart';
 import '../../services/location_tracking_service.dart';
+import 'navigation_directions_page.dart';
 
 class ShipperOrdersPage extends StatefulWidget {
   const ShipperOrdersPage({super.key});
@@ -32,6 +35,10 @@ class _ShipperOrdersPageState extends State<ShipperOrdersPage>
   // My orders (đang giao, đã giao)
   List<ShipperOrderResponseDto> _myOrders = [];
   bool _loadingMyOrders = false;
+
+  // Route cache: orderId -> route points từ OSRM
+  final Map<int, List<LatLng>> _routeCache = {};
+  final Map<int, bool> _routeLoading = {};
 
   @override
   void initState() {
@@ -495,11 +502,11 @@ class _ShipperOrdersPageState extends State<ShipperOrdersPage>
               const SizedBox(height: 16),
               _buildRouteMapPreview(order),
               const SizedBox(height: 12),
-              // Nút mở Google Maps navigation
+              // Nút mở chỉ dẫn đường đi trong app
               SizedBox(
                 width: double.infinity,
                 child: OutlinedButton.icon(
-                  onPressed: () => _openGoogleMapsNavigation(order),
+                  onPressed: () => _openNavigationDirections(order),
                   icon: const Icon(Icons.navigation, size: 20),
                   label: const Text(
                     'Chỉ dẫn đường đi',
@@ -607,6 +614,18 @@ class _ShipperOrdersPageState extends State<ShipperOrdersPage>
     final centerLng = (order.shopLng + order.customerLng!) / 2;
     final centerLatLng = LatLng(centerLat, centerLng);
 
+    // Fetch route nếu chưa có trong cache
+    final routePoints = _routeCache[order.id];
+    final isLoadingRoute = _routeLoading[order.id] ?? false;
+
+    // Fetch route ngay khi build widget (chỉ fetch 1 lần)
+    if (routePoints == null && !isLoadingRoute) {
+      // Dùng WidgetsBinding để đảm bảo fetch sau khi build
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _fetchRouteForOrder(order);
+      });
+    }
+
     return Container(
       height: 200,
       decoration: BoxDecoration(
@@ -615,7 +634,9 @@ class _ShipperOrdersPageState extends State<ShipperOrdersPage>
       ),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(12),
-        child: FlutterMap(
+        child: Stack(
+          children: [
+            FlutterMap(
           options: MapOptions(
             initialCenter: centerLatLng,
             initialZoom: 13.0,
@@ -634,13 +655,25 @@ class _ShipperOrdersPageState extends State<ShipperOrdersPage>
               userAgentPackageName: 'com.petshop.app',
               maxZoom: 19,
             ),
-            // Polyline - Route từ shop đến customer
+                // Polyline - Route từ shop đến customer (OSRM route thực tế)
+                if (routePoints != null && routePoints.length > 1)
+                  PolylineLayer(
+                    polylines: [
+                      Polyline(
+                        points: routePoints,
+                        strokeWidth: 4.0,
+                        color: Colors.blue.withOpacity(0.8),
+                      ),
+                    ],
+                  )
+                else
+                  // Fallback: đường thẳng nếu chưa có route
             PolylineLayer(
               polylines: [
                 Polyline(
                   points: [shopLatLng, customerLatLng],
                   strokeWidth: 3.0,
-                  color: Colors.blue.withOpacity(0.7),
+                        color: Colors.grey.withOpacity(0.5),
                 ),
               ],
             ),
@@ -700,6 +733,146 @@ class _ShipperOrdersPageState extends State<ShipperOrdersPage>
               ],
             ),
           ],
+            ),
+            // Loading indicator khi đang fetch route
+            if (isLoadingRoute)
+              Container(
+                color: Colors.black.withOpacity(0.1),
+                child: const Center(
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// Gọi OSRM API để lấy route thực tế theo đường phố
+  Future<void> _fetchRouteForOrder(ShipperOrderResponseDto order) async {
+    if (order.customerLat == null || order.customerLng == null) return;
+    if (_routeLoading[order.id] == true) return; // Đang fetch rồi
+
+    setState(() {
+      _routeLoading[order.id] = true;
+    });
+
+    try {
+      final shopLatLng = LatLng(order.shopLat, order.shopLng);
+      final customerLatLng = LatLng(order.customerLat!, order.customerLng!);
+
+      final result = await _fetchOsrmRoute(shopLatLng, customerLatLng);
+
+      if (mounted) {
+        setState(() {
+          _routeCache[order.id] = result.points;
+          _routeLoading[order.id] = false;
+        });
+      }
+    } catch (e) {
+      print('⚠️ Error fetching route for order ${order.id}: $e');
+      if (mounted) {
+        setState(() {
+          _routeLoading[order.id] = false;
+          // Fallback: lưu đường thẳng nếu lỗi
+          _routeCache[order.id] = [
+            LatLng(order.shopLat, order.shopLng),
+            LatLng(order.customerLat!, order.customerLng!),
+          ];
+        });
+      }
+    }
+  }
+
+  /// Gọi OSRM API lấy route, distance(m), duration(s). Fallback đường thẳng nếu lỗi.
+  Future<({List<LatLng> points, int distanceM, int durationS})> _fetchOsrmRoute(
+      LatLng from, LatLng to) async {
+    try {
+      // OSRM API endpoint - sử dụng HTTPS
+      final url =
+          'https://router.project-osrm.org/route/v1/driving/'
+          '${from.longitude},${from.latitude};${to.longitude},${to.latitude}'
+          '?overview=full&geometries=geojson&alternatives=false';
+      
+      print('🗺️ Fetching OSRM route from (${from.latitude}, ${from.longitude}) to (${to.latitude}, ${to.longitude})');
+      
+      final response =
+          await http.get(Uri.parse(url)).timeout(const Duration(seconds: 15));
+      
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body) as Map<String, dynamic>;
+        
+        // Kiểm tra code response
+        if (data['code'] == 'Ok' || data['code'] == 'NoRoute') {
+          final routes = data['routes'] as List<dynamic>?;
+          if (routes != null && routes.isNotEmpty) {
+            final route = routes[0] as Map<String, dynamic>;
+            final geometry = route['geometry'] as Map<String, dynamic>;
+            final coords = geometry['coordinates'] as List<dynamic>;
+            
+            // Parse GeoJSON coordinates: [lng, lat] -> LatLng(lat, lng)
+            final points = coords
+                .map((c) {
+                  if (c is List && c.length >= 2) {
+                    return LatLng(
+                      (c[1] as num).toDouble(), // lat
+                      (c[0] as num).toDouble(), // lng
+                    );
+                  }
+                  return null;
+                })
+                .whereType<LatLng>()
+                .toList();
+            
+            final distanceM = ((route['distance'] as num?) ?? 0).toInt();
+            final durationS = ((route['duration'] as num?) ?? 0).toInt();
+            
+            print('✅ OSRM route fetched: ${points.length} points, ${distanceM}m, ${durationS}s');
+            
+            // Đảm bảo có ít nhất 2 points
+            if (points.length >= 2) {
+              return (points: points, distanceM: distanceM, durationS: durationS);
+            }
+          } else {
+            print('⚠️ OSRM: No routes found');
+          }
+        } else {
+          print('⚠️ OSRM API error code: ${data['code']}');
+        }
+      } else {
+        print('⚠️ OSRM API HTTP error: ${response.statusCode}');
+      }
+    } catch (e) {
+      print('⚠️ OSRM API exception: $e');
+    }
+    
+    // Fallback: đường thẳng (chỉ khi lỗi)
+    print('⚠️ Using fallback straight line');
+    return (points: [from, to], distanceM: 0, durationS: 0);
+  }
+
+  /// Mở màn hình chỉ dẫn đường đi trong app
+  void _openNavigationDirections(ShipperOrderResponseDto order) {
+    if (order.customerLat == null || order.customerLng == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Không có thông tin địa chỉ khách hàng'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    final shopLatLng = LatLng(order.shopLat, order.shopLng);
+    final customerLatLng = LatLng(order.customerLat!, order.customerLng!);
+
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => NavigationDirectionsPage(
+          start: shopLatLng,
+          end: customerLatLng,
+          startName: 'Cửa hàng',
+          endName: order.customerName,
         ),
       ),
     );

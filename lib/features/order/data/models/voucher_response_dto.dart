@@ -33,7 +33,7 @@ class VoucherResponseDto {
 
   factory VoucherResponseDto.fromJson(Map<String, dynamic> json) {
     return VoucherResponseDto(
-      id: json['id'] as int,
+      id: (json['id'] as num).toInt(),
       code: json['code'] as String,
       name: json['name'] as String,
       description: json['description'] as String?,
@@ -45,8 +45,8 @@ class VoucherResponseDto {
       maxDiscountAmount: json['maxDiscountAmount'] != null
           ? (json['maxDiscountAmount'] as num).toDouble()
           : null,
-      usageLimit: json['usageLimit'] as int?,
-      usedCount: json['usedCount'] as int,
+      usageLimit: (json['usageLimit'] as num?)?.toInt(),
+      usedCount: (json['usedCount'] as num?)?.toInt() ?? 0,
       startDate: json['startDate'] as String?,
       endDate: json['endDate'] as String?,
       isActive: json['isActive'] as bool,

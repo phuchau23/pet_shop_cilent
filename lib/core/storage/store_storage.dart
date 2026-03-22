@@ -5,10 +5,11 @@ class StoreStorage {
   static const String _keyStoreLng = 'store_longitude';
   static const String _keyStoreAddress = 'store_address';
 
-  // Địa chỉ cửa hàng mặc định (HCM)
-  static const double defaultLat = 10.762622;
-  static const double defaultLng = 106.660172;
-  static const String defaultAddress = '123 Đường ABC, Quận 1, TP. Hồ Chí Minh';
+  // Đại học FPT TP.HCM — Khu CNC, Long Thạnh Mỹ, TP. Thủ Đức (cũ Q.9)
+  static const double defaultLat = 10.841182;
+  static const double defaultLng = 106.809883;
+  static const String defaultAddress =
+      'Đại học FPT, Khu CNC, P. Long Thạnh Mỹ, TP. Thủ Đức, TP. Hồ Chí Minh';
 
   /// Lưu địa chỉ cửa hàng
   static Future<void> saveStoreLocation({

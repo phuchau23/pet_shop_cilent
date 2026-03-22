@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import '../../features/home/presentation/pages/home_page.dart';
+import '../../features/locations/presentation/pages/store_map_tab_page.dart';
 import '../../features/profile/presentation/pages/profile_page.dart';
+import '../../features/search/presentation/pages/search_page.dart';
 import '../theme/app_colors.dart';
 
 class BottomNavBar extends StatefulWidget {
@@ -20,8 +22,8 @@ class _BottomNavBarState extends State<BottomNavBar> {
     super.initState();
     _pages = [
       const HomePage(),
-      const _SearchPage(),
-      const _LocationPage(),
+      const SearchPage(embedInBottomNav: true),
+      const StoreMapTabPage(),
       const ProfilePage(),
     ];
   }
@@ -133,10 +135,7 @@ class _NavItem extends StatelessWidget {
               AnimatedSwitcher(
                 duration: const Duration(milliseconds: 200),
                 transitionBuilder: (child, animation) {
-                  return ScaleTransition(
-                    scale: animation,
-                    child: child,
-                  );
+                  return ScaleTransition(scale: animation, child: child);
                 },
                 child: Icon(
                   isSelected ? selectedIcon : icon,
@@ -169,26 +168,3 @@ class _NavItem extends StatelessWidget {
   }
 }
 
-class _SearchPage extends StatelessWidget {
-  const _SearchPage();
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('Search')),
-      body: const Center(child: Text('Search Page')),
-    );
-  }
-}
-
-class _LocationPage extends StatelessWidget {
-  const _LocationPage();
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('Location')),
-      body: const Center(child: Text('Location Page')),
-    );
-  }
-}

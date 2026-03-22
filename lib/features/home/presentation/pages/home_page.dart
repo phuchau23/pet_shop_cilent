@@ -6,6 +6,7 @@ import '../../../categories/data/repositories/category_repository_impl.dart';
 import '../../../categories/domain/usecases/get_categories_usecase.dart';
 import '../../../categories/domain/entities/category.dart';
 import '../widgets/home_header.dart';
+import '../widgets/hero_banner_section.dart';
 import '../widgets/special_offers_section.dart';
 import '../widgets/category_section.dart';
 import '../widgets/product_section.dart';
@@ -71,16 +72,19 @@ class _HomePageState extends State<HomePage> {
           // 1. Header với location và search
           const HomeHeader(),
 
-          // 2. Special Offers Section
-          const SpecialOffersSection(),
+          // 2. Hero Banner Section
+          const HeroBannerSection(),
 
-          // 3. Category Section
+          // 3. Special Offers Section
+          // const SpecialOffersSection(),
+
+          // 4. Category Section (Grid layout)
           CategorySection(
             categories: _categories,
             isLoading: _isLoadingCategories,
           ),
 
-          // 4. Best Selling Items Section
+          // 5. Products Section (Grid layout)
           const ProductSection(),
         ],
       ),

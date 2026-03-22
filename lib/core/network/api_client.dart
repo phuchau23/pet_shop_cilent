@@ -20,7 +20,8 @@ class ApiClient {
   // Nếu true, sẽ luôn dùng IP thiết bị thật khi không phải web
   // Hữu ích khi phát hiện tự động không chính xác
   // Đặt true nếu bạn chắc chắn đang chạy trên thiết bị thật
-  static const bool _forceRealDeviceIP = true;
+  // ⚠️ Đặt false nếu chạy trên emulator để dùng 10.0.2.2
+  static const bool _forceRealDeviceIP = false;
 
   static final DeviceInfoPlugin _deviceInfo = DeviceInfoPlugin();
   static bool? _isRealDeviceCache;
@@ -104,7 +105,7 @@ class ApiClient {
     } else {
       // Nếu force real device IP, dùng IP thiết bị thật ngay từ đầu
       if (_forceRealDeviceIP) {
-        return 'http://192.168.1.4:5000/api';
+        return 'http://192.168.1.7:5000/api';
       }
 
       // Kiểm tra platform bằng defaultTargetPlatform (an toàn cho cả web và mobile)
@@ -181,10 +182,10 @@ class ApiClient {
       }
 
       if (isRealDevice) {
-        // Thiết bị thật - cập nhật baseUrl
+        // Thiết bị thật - cập nhật baseUrl (cập nhật IP mới nhất: 192.168.1.7)
         final newBaseUrl = defaultTargetPlatform == TargetPlatform.android
-            ? 'http://192.168.1.4:5000/api'
-            : 'http://192.168.1.4:5000/api';
+            ? 'http://192.168.1.7:5000/api'
+            : 'http://192.168.1.7:5000/api';
 
         // Chỉ cập nhật nếu khác với baseUrl hiện tại
         if (_actualBaseUrl != newBaseUrl) {
@@ -200,8 +201,8 @@ class ApiClient {
       // có thể là thiết bị thật nhưng phát hiện fail -> dùng IP thật
       if (!kIsWeb && _forceRealDeviceIP) {
         final fallbackUrl = defaultTargetPlatform == TargetPlatform.android
-            ? 'http://192.168.1.4:5000/api'
-            : 'http://192.168.1.4:5000/api';
+            ? 'http://192.168.1.7:5000/api'
+            : 'http://192.168.1.7:5000/api';
         if (_actualBaseUrl != fallbackUrl) {
           _actualBaseUrl = fallbackUrl;
           _dio.options.baseUrl = fallbackUrl;

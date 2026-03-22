@@ -92,6 +92,22 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
     print('Response status: ${response.statusCode}');
     print('Response data: ${response.data}');
 
+    // Kiểm tra status code trước khi parse
+    if (response.statusCode != null && response.statusCode! >= 400) {
+      final errorData = response.data;
+      if (errorData is Map<String, dynamic>) {
+        final message = errorData['title'] ?? 
+                        errorData['message'] ?? 
+                        errorData['detail'] ?? 
+                        'Đăng nhập thất bại';
+        throw Exception(message.toString());
+      } else if (errorData is String) {
+        throw Exception(errorData);
+      } else {
+        throw Exception('Đăng nhập thất bại: ${response.statusCode}');
+      }
+    }
+
     final apiResponse = ApiResponse<LoginResponseDto>.fromJson(
       response.data as Map<String, dynamic>,
       (data) => LoginResponseDto.fromJson(data as Map<String, dynamic>),

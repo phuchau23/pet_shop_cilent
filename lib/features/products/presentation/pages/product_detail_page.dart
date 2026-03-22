@@ -4,6 +4,7 @@ import '../../domain/entities/product.dart';
 import '../../domain/entities/product_size.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/storage/user_storage.dart';
+import '../../../../core/widgets/toast_notification.dart';
 import '../../../cart/presentation/providers/cart_provider.dart';
 import '../../../cart/presentation/pages/cart_page.dart';
 
@@ -683,35 +684,27 @@ class _ProductDetailPageState extends ConsumerState<ProductDetailPage> {
                       : () async {
                           // Validate size đã được chọn
                           if (_selectedSize == null) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text('Vui lòng chọn size'),
-                                backgroundColor: AppColors.error,
-                              ),
+                            ToastNotification.error(
+                              context,
+                              'Vui lòng chọn size',
                             );
                             return;
                           }
 
                           // Validate quantity không vượt quá stock
                           if (_quantity > _selectedSize!.stockQuantity) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: Text(
-                                  'Số lượng vượt quá tồn kho (Còn ${_selectedSize!.stockQuantity})',
-                                ),
-                                backgroundColor: AppColors.error,
-                              ),
+                            ToastNotification.error(
+                              context,
+                              'Số lượng vượt quá tồn kho (Còn ${_selectedSize!.stockQuantity})',
                             );
                             return;
                           }
 
                           final userId = await UserStorage.getUserId();
                           if (userId == null) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text('Vui lòng đăng nhập'),
-                                backgroundColor: AppColors.error,
-                              ),
+                            ToastNotification.error(
+                              context,
+                              'Vui lòng đăng nhập',
                             );
                             return;
                           }
@@ -736,20 +729,16 @@ class _ProductDetailPageState extends ConsumerState<ProductDetailPage> {
                             await countNotifier.refresh();
 
                             if (mounted) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text('Đã thêm vào giỏ hàng'),
-                                  backgroundColor: AppColors.success,
-                                ),
+                              ToastNotification.success(
+                                context,
+                                'Đã thêm vào giỏ hàng',
                               );
                             }
                           } catch (e) {
                             if (mounted) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                  content: Text('Lỗi: $e'),
-                                  backgroundColor: AppColors.error,
-                                ),
+                              ToastNotification.error(
+                                context,
+                                'Lỗi: $e',
                               );
                             }
                           } finally {

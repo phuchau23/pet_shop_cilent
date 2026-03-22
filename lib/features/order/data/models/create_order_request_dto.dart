@@ -82,9 +82,9 @@ class DeliveryAddressDto {
       'addressDetail': addressDetail,
     };
     
-    if (wardCode != null) json['wardCode'] = wardCode;
-    if (districtCode != null) json['districtCode'] = districtCode;
-    if (provinceCode != null) json['provinceCode'] = provinceCode;
+    if (wardCode != null && wardCode! > 0) json['wardCode'] = wardCode;
+    if (districtCode != null && districtCode! > 0) json['districtCode'] = districtCode;
+    if (provinceCode != null && provinceCode! > 0) json['provinceCode'] = provinceCode;
     if (fullAddress != null && fullAddress!.isNotEmpty) {
       json['fullAddress'] = fullAddress;
     }

@@ -15,7 +15,7 @@ class Route {
 
 class RoutingService {
   final Dio _dio;
-  static const String _osrmBaseUrl = 'http://router.project-osrm.org';
+  static const String _osrmBaseUrl = 'https://router.project-osrm.org';
 
   RoutingService({Dio? dio}) : _dio = dio ?? Dio();
 

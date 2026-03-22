@@ -50,6 +50,61 @@ class _OrderTrackingPageState extends ConsumerState<OrderTrackingPage>
 
   // Map controller
   final MapController _mapController = MapController();
+  bool _mapReady = false;
+
+  // Validate tọa độ: phải nằm trong bounding box Việt Nam
+  // Việt Nam: lat 8.18–23.39, lng 102.14–109.46
+  bool _isValidLatLng(double? lat, double? lng) {
+    if (lat == null || lng == null) return false;
+    if (lat < 7.0 || lat > 24.0) return false;
+    if (lng < 101.0 || lng > 110.5) return false;
+    return true;
+  }
+
+  void _fitMapToMarkers({int retry = 0}) {
+    if (!mounted) return;
+    if (!_mapReady) {
+      // Map chưa ready → retry tối đa 8 lần, mỗi 200ms
+      if (retry < 8) {
+        Future.delayed(const Duration(milliseconds: 200),
+            () => _fitMapToMarkers(retry: retry + 1));
+      }
+      return;
+    }
+
+    final t = _tracking;
+    final List<LatLng> pts = [];
+    if (_isValidLatLng(t?.shopLat, t?.shopLng)) {
+      pts.add(LatLng(t!.shopLat!, t.shopLng!));
+    }
+    if (_isValidLatLng(t?.customerLat, t?.customerLng)) {
+      pts.add(LatLng(t!.customerLat!, t.customerLng!));
+    }
+    final shipper = _shipperPositionNotifier.value;
+    if (shipper != null && _isValidLatLng(shipper.latitude, shipper.longitude)) {
+      pts.add(shipper);
+    }
+
+    print('🗺️ fitMapToMarkers: ${pts.length} valid points: $pts');
+
+    try {
+      if (pts.length >= 2) {
+        _mapController.fitCamera(
+          CameraFit.bounds(
+            bounds: LatLngBounds.fromPoints(pts),
+            padding: const EdgeInsets.all(60),
+          ),
+        );
+      } else if (pts.length == 1) {
+        _mapController.move(pts.first, 15.0);
+      } else {
+        // Không có tọa độ hợp lệ → về mặc định HCM
+        _mapController.move(const LatLng(10.8231, 106.6297), 13.0);
+      }
+    } catch (e) {
+      print('❌ fitMapToMarkers error: $e');
+    }
+  }
 
   @override
   void initState() {
@@ -151,18 +206,18 @@ class _OrderTrackingPageState extends ConsumerState<OrderTrackingPage>
       });
 
       // Update shipper position notifier từ API response
-      final LatLng? shipperPos = (tracking.shipperCurrentLat != null && tracking.shipperCurrentLng != null)
+      final LatLng? shipperPos = _isValidLatLng(tracking.shipperCurrentLat, tracking.shipperCurrentLng)
           ? LatLng(tracking.shipperCurrentLat!, tracking.shipperCurrentLng!)
           : null;
       if (shipperPos != null) {
         _shipperPositionNotifier.value = shipperPos;
       }
 
-      // Fetch OSRM routes (đường bộ thực tế)
-      final LatLng? shopPos = (tracking.shopLat != null && tracking.shopLng != null)
+      // Fetch OSRM routes (chỉ khi tọa độ hợp lệ)
+      final LatLng? shopPos = _isValidLatLng(tracking.shopLat, tracking.shopLng)
           ? LatLng(tracking.shopLat!, tracking.shopLng!)
           : null;
-      final LatLng? customerPos = (tracking.customerLat != null && tracking.customerLng != null)
+      final LatLng? customerPos = _isValidLatLng(tracking.customerLat, tracking.customerLng)
           ? LatLng(tracking.customerLat!, tracking.customerLng!)
           : null;
 
@@ -174,7 +229,6 @@ class _OrderTrackingPageState extends ConsumerState<OrderTrackingPage>
         final result = await _fetchOsrmRoute(shopPos, shipperPos);
         if (mounted) setState(() => _shipperRoute = result.points);
       }
-      // Fetch shipper→customer route để lấy distance + ETA
       if (shipperPos != null && customerPos != null) {
         final result = await _fetchOsrmRoute(shipperPos, customerPos);
         if (mounted) {
@@ -184,6 +238,9 @@ class _OrderTrackingPageState extends ConsumerState<OrderTrackingPage>
           });
         }
       }
+
+      // Focus map sau khi tất cả data + routes đã sẵn sàng
+      _fitMapToMarkers();
     } catch (e) {
       if (_isInitialLoad) {
         setState(() {
@@ -426,7 +483,7 @@ class _OrderTrackingPageState extends ConsumerState<OrderTrackingPage>
         borderRadius: BorderRadius.circular(24),
         boxShadow: [
           BoxShadow(
-            color: gradientColors[0].withOpacity(0.35),
+            color: gradientColors[0].withValues(alpha: 0.35),
             blurRadius: 20,
             offset: const Offset(0, 8),
           ),
@@ -473,9 +530,9 @@ class _OrderTrackingPageState extends ConsumerState<OrderTrackingPage>
       width: 76,
       height: 76,
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.2),
+        color: Colors.white.withValues(alpha: 0.2),
         shape: BoxShape.circle,
-        border: Border.all(color: Colors.white.withOpacity(0.4), width: 2),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.4), width: 2),
       ),
       child: Icon(icon, color: Colors.white, size: 38),
     );
@@ -505,9 +562,9 @@ class _OrderTrackingPageState extends ConsumerState<OrderTrackingPage>
       width: double.infinity,
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.15),
+        color: Colors.white.withValues(alpha: 0.15),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.white.withOpacity(0.3)),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.3)),
       ),
       child: Row(
         children: [
@@ -519,7 +576,7 @@ class _OrderTrackingPageState extends ConsumerState<OrderTrackingPage>
               color: Colors.white,
               shape: BoxShape.circle,
               boxShadow: [
-                BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 8),
+                BoxShadow(color: Colors.black.withValues(alpha: 0.1), blurRadius: 8),
               ],
             ),
             child: Icon(Icons.delivery_dining_rounded, color: accentColor, size: 26),
@@ -566,7 +623,7 @@ class _OrderTrackingPageState extends ConsumerState<OrderTrackingPage>
                   ),
                   Text(
                     _formatDuration(_remainingDurationS ?? 0),
-                    style: TextStyle(fontSize: 10, color: accentColor.withOpacity(0.8)),
+                    style: TextStyle(fontSize: 10, color: accentColor.withValues(alpha: 0.8)),
                   ),
                 ],
               ),
@@ -577,18 +634,18 @@ class _OrderTrackingPageState extends ConsumerState<OrderTrackingPage>
   }
 
   Widget _buildMapSection() {
-    LatLng? shopLatLng;
-    if (_tracking!.shopLat != null && _tracking!.shopLng != null) {
-      shopLatLng = LatLng(_tracking!.shopLat!, _tracking!.shopLng!);
-    }
-
-    LatLng? customerLatLng;
-    if (_tracking!.customerLat != null && _tracking!.customerLng != null) {
-      customerLatLng = LatLng(_tracking!.customerLat!, _tracking!.customerLng!);
-    }
-
-    // Dùng giá trị hiện tại của notifier để tính bounds ban đầu
-    final initialShipperPos = _shipperPositionNotifier.value;
+    // Chỉ dùng tọa độ đã qua validation Vietnam bounds
+    final LatLng? shopLatLng = _isValidLatLng(_tracking!.shopLat, _tracking!.shopLng)
+        ? LatLng(_tracking!.shopLat!, _tracking!.shopLng!)
+        : null;
+    final LatLng? customerLatLng = _isValidLatLng(_tracking!.customerLat, _tracking!.customerLng)
+        ? LatLng(_tracking!.customerLat!, _tracking!.customerLng!)
+        : null;
+    final shipperRaw = _shipperPositionNotifier.value;
+    final LatLng? initialShipperPos = (shipperRaw != null &&
+            _isValidLatLng(shipperRaw.latitude, shipperRaw.longitude))
+        ? shipperRaw
+        : null;
 
     final List<LatLng> allPoints = [
       if (shopLatLng != null) shopLatLng,
@@ -596,8 +653,10 @@ class _OrderTrackingPageState extends ConsumerState<OrderTrackingPage>
       if (initialShipperPos != null) initialShipperPos,
     ];
 
-    LatLng centerLatLng;
-    double initialZoom = 14.0;
+    // Luôn mặc định HCM — _fitMapToMarkers sẽ override sau khi map ready
+    const LatLng defaultCenter = LatLng(10.8231, 106.6297);
+    LatLng centerLatLng = defaultCenter;
+    double initialZoom = 13.0;
 
     if (allPoints.length >= 2) {
       final minLat = allPoints.map((p) => p.latitude).reduce((a, b) => a < b ? a : b);
@@ -606,14 +665,13 @@ class _OrderTrackingPageState extends ConsumerState<OrderTrackingPage>
       final maxLng = allPoints.map((p) => p.longitude).reduce((a, b) => a > b ? a : b);
       centerLatLng = LatLng((minLat + maxLat) / 2, (minLng + maxLng) / 2);
       final maxDiff = (maxLat - minLat) > (maxLng - minLng) ? (maxLat - minLat) : (maxLng - minLng);
-      if (maxDiff > 0.1) initialZoom = 11.0;
-      else if (maxDiff > 0.05) initialZoom = 12.0;
-      else if (maxDiff > 0.01) initialZoom = 13.0;
-      else initialZoom = 14.0;
+      if (maxDiff > 0.1) { initialZoom = 11.0; }
+      else if (maxDiff > 0.05) { initialZoom = 12.0; }
+      else if (maxDiff > 0.01) { initialZoom = 13.0; }
+      else { initialZoom = 14.0; }
     } else if (allPoints.isNotEmpty) {
       centerLatLng = allPoints.first;
-    } else {
-      centerLatLng = const LatLng(10.8415, 106.8099); // FPT HCM default
+      initialZoom = 15.0;
     }
 
     return Container(
@@ -623,7 +681,7 @@ class _OrderTrackingPageState extends ConsumerState<OrderTrackingPage>
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: 0.05),
             blurRadius: 10,
             offset: const Offset(0, 2),
           ),
@@ -650,7 +708,9 @@ class _OrderTrackingPageState extends ConsumerState<OrderTrackingPage>
                 bottomLeft: Radius.circular(16),
                 bottomRight: Radius.circular(16),
               ),
-              child: FlutterMap(
+              child: Stack(
+                children: [
+                  FlutterMap(
                 mapController: _mapController,
                 options: MapOptions(
                   initialCenter: centerLatLng,
@@ -661,19 +721,10 @@ class _OrderTrackingPageState extends ConsumerState<OrderTrackingPage>
                     flags: InteractiveFlag.all,
                   ),
                   onMapReady: () {
-                    if (allPoints.length >= 2) {
-                      Future.delayed(const Duration(milliseconds: 300), () {
-                        try {
-                          final bounds = LatLngBounds.fromPoints(allPoints);
-                          _mapController.fitCamera(
-                            CameraFit.bounds(
-                              bounds: bounds,
-                              padding: const EdgeInsets.all(50),
-                            ),
-                          );
-                        } catch (_) {}
-                      });
-                    }
+                    _mapReady = true;
+                    WidgetsBinding.instance.addPostFrameCallback(
+                      (_) => _fitMapToMarkers(),
+                    );
                   },
                 ),
                 children: [
@@ -696,7 +747,7 @@ class _OrderTrackingPageState extends ConsumerState<OrderTrackingPage>
                         Polyline(
                           points: _shipperRoute,
                           strokeWidth: 4.0,
-                          color: const Color(0xFF4285F4).withOpacity(0.8),
+                          color: const Color(0xFF4285F4).withValues(alpha: 0.8),
                         ),
                     ],
                   ),
@@ -716,7 +767,7 @@ class _OrderTrackingPageState extends ConsumerState<OrderTrackingPage>
                               border: Border.all(color: Colors.white, width: 3),
                               boxShadow: [
                                 BoxShadow(
-                                  color: Colors.black.withOpacity(0.3),
+                                  color: Colors.black.withValues(alpha: 0.3),
                                   blurRadius: 8,
                                   offset: const Offset(0, 2),
                                 ),
@@ -738,7 +789,7 @@ class _OrderTrackingPageState extends ConsumerState<OrderTrackingPage>
                               border: Border.all(color: Colors.white, width: 3),
                               boxShadow: [
                                 BoxShadow(
-                                  color: Colors.black.withOpacity(0.3),
+                                  color: Colors.black.withValues(alpha: 0.3),
                                   blurRadius: 8,
                                   offset: const Offset(0, 2),
                                 ),
@@ -768,7 +819,7 @@ class _OrderTrackingPageState extends ConsumerState<OrderTrackingPage>
                                 border: Border.all(color: Colors.white, width: 3),
                                 boxShadow: [
                                   BoxShadow(
-                                    color: Colors.black.withOpacity(0.3),
+                                    color: Colors.black.withValues(alpha: 0.3),
                                     blurRadius: 8,
                                     offset: const Offset(0, 2),
                                   ),
@@ -783,11 +834,41 @@ class _OrderTrackingPageState extends ConsumerState<OrderTrackingPage>
                   ),
                 ],
               ),
-            ),
-          ),
-        ],
-      ),
-    );
+              // Nút recenter
+              Positioned(
+                right: 10,
+                bottom: 10,
+                child: GestureDetector(
+                  onTap: _fitMapToMarkers,
+                  child: Container(
+                    width: 36,
+                    height: 36,
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      shape: BoxShape.circle,
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.18),
+                          blurRadius: 6,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                    child: const Icon(
+                      Icons.my_location_rounded,
+                      size: 18,
+                      color: AppColors.primaryDark,
+                    ),
+                  ),
+                ),
+              ),
+                ],       // closes Stack.children
+              ),         // closes Stack
+            ),           // closes ClipRRect
+          ),             // closes SizedBox
+        ],               // closes Column.children
+      ),                 // closes Column
+    );                   // closes Container (return)
   }
 
   Widget _buildTimeline() {
@@ -798,7 +879,7 @@ class _OrderTrackingPageState extends ConsumerState<OrderTrackingPage>
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.06),
+            color: Colors.black.withValues(alpha: 0.06),
             blurRadius: 16,
             offset: const Offset(0, 4),
           ),
@@ -874,7 +955,7 @@ class _OrderTrackingPageState extends ConsumerState<OrderTrackingPage>
                       color: statusColor,
                       boxShadow: [
                         BoxShadow(
-                          color: statusColor.withOpacity(0.35),
+                          color: statusColor.withValues(alpha: 0.35),
                           blurRadius: 8,
                           spreadRadius: 2,
                         ),
@@ -908,7 +989,7 @@ class _OrderTrackingPageState extends ConsumerState<OrderTrackingPage>
                       margin: const EdgeInsets.symmetric(vertical: 4),
                       decoration: BoxDecoration(
                         borderRadius: BorderRadius.circular(1),
-                        color: item.isCompleted ? statusColor.withOpacity(0.25) : Colors.grey.shade200,
+                        color: item.isCompleted ? statusColor.withValues(alpha: 0.25) : Colors.grey.shade200,
                       ),
                     ),
                   ),
@@ -957,7 +1038,7 @@ class _OrderTrackingPageState extends ConsumerState<OrderTrackingPage>
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                       decoration: BoxDecoration(
-                        color: statusColor.withOpacity(0.1),
+                        color: statusColor.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(6),
                       ),
                       child: Text(

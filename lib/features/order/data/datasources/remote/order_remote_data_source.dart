@@ -151,6 +151,8 @@ class OrderRemoteDataSourceImpl implements OrderRemoteDataSource {
   @override
   Future<List<VoucherResponseDto>> getVouchers() async {
     try {
+      await apiClient.ensureInitialized();
+
       print(
         '📤 Getting vouchers: ${ApiClient.baseUrl}${ApiEndpoints.getVouchers}',
       );

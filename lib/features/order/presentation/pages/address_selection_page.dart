@@ -4,6 +4,8 @@ import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/network/api_client.dart';
+import '../../../../core/services/location_service.dart';
+import '../../data/services/gps_address_resolver.dart';
 import '../../../locations/presentation/providers/location_provider.dart';
 import '../../../locations/domain/entities/province.dart';
 import '../../../locations/domain/entities/district.dart';
@@ -58,6 +60,7 @@ class _AddressSelectionPageState extends ConsumerState<AddressSelectionPage> {
   // Delivery estimate (chỉ lưu, không hiển thị route trong trang này)
   EstimateDeliveryResponseDto? _deliveryEstimate;
   bool _isLoadingEstimate = false;
+  bool _loadingGps = false;
 
   @override
   void initState() {
@@ -168,7 +171,102 @@ class _AddressSelectionPageState extends ConsumerState<AddressSelectionPage> {
     _mapController.dispose();
     super.dispose();
   }
-  
+
+  Future<void> _useCurrentLocation() async {
+    setState(() => _loadingGps = true);
+    try {
+      final pos = await LocationService.getCurrentLocation();
+      if (!mounted) return;
+      if (pos == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Không lấy được vị trí. Bật GPS và cấp quyền vị trí.'),
+            backgroundColor: AppColors.error,
+          ),
+        );
+        return;
+      }
+
+      final provinces = await ref.read(provincesProvider.future);
+      final getDistricts = ref.read(getDistrictsUseCaseProvider);
+      final getWards = ref.read(getWardsUseCaseProvider);
+
+      final resolved = await GpsAddressResolver.resolve(
+        latitude: pos.latitude,
+        longitude: pos.longitude,
+        provinces: provinces,
+        loadDistricts: (code) => getDistricts(code),
+        loadWards: (code) => getWards(code),
+      );
+
+      if (!mounted) return;
+
+      if (resolved == null) {
+        // Vẫn đặt pin lên bản đồ, user tự chọn tỉnh/quận/xã thủ công
+        setState(() => _selectedCoordinates = LatLng(pos.latitude, pos.longitude));
+        Future.delayed(const Duration(milliseconds: 300), () {
+          if (mounted) _mapController.move(LatLng(pos.latitude, pos.longitude), 15.0);
+        });
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Đã ghim vị trí GPS. Vui lòng chọn Tỉnh/Quận/Phường bên dưới.'),
+              backgroundColor: AppColors.warning,
+              duration: Duration(seconds: 4),
+            ),
+          );
+        }
+        return;
+      }
+
+      // Resolve thành công: load trực tiếp các object province/district/ward
+      // để set ngay mà không cần qua cascade restore codes
+      final province = provinces.firstWhere((p) => p.code == resolved.provinceCode);
+      final districts = await getDistricts(province.code);
+      if (!mounted) return;
+      final district = districts.firstWhere((d) => d.code == resolved.districtCode);
+      final wards = await getWards(district.code);
+      if (!mounted) return;
+      final ward = wards.firstWhere((w) => w.code == resolved.wardCode);
+
+      // Trích số nhà/đường nếu có
+      final street = resolved.fullAddress
+          .replaceAll(', ${resolved.wardName}', '')
+          .replaceAll(', ${resolved.districtName}', '')
+          .replaceAll(', ${resolved.provinceName}', '')
+          .trim();
+
+      setState(() {
+        _selectedProvince = province;
+        _selectedDistrict = district;
+        _selectedWard = ward;
+        _boundaryPolygon = null;
+        _provinceBoundaryPolygon = null;
+        _selectedCoordinates = LatLng(resolved.latitude, resolved.longitude);
+        // Xóa restore codes vì đã set trực tiếp
+        _restoreProvinceCode = null;
+        _restoreDistrictCode = null;
+        _restoreWardCode = null;
+      });
+
+      if (street.isNotEmpty) _specificAddressController.text = street;
+
+      // Load boundary + di chuyển bản đồ
+      _geocodeWard();
+      Future.delayed(const Duration(milliseconds: 300), () {
+        if (mounted) _mapController.move(LatLng(resolved.latitude, resolved.longitude), 15.0);
+      });
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Lỗi: $e'), backgroundColor: AppColors.error),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _loadingGps = false);
+    }
+  }
+
   Future<void> _geocodeSpecificAddress() async {
     if (_specificAddressController.text.trim().isEmpty) {
       return;
@@ -591,6 +689,57 @@ class _AddressSelectionPageState extends ConsumerState<AddressSelectionPage> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  // Nút lấy vị trí hiện tại
+                  Material(
+                    color: AppColors.primaryVeryLight,
+                    borderRadius: BorderRadius.circular(12),
+                    child: InkWell(
+                      onTap: _loadingGps ? null : _useCurrentLocation,
+                      borderRadius: BorderRadius.circular(12),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 13),
+                        child: Row(
+                          children: [
+                            if (_loadingGps)
+                              const SizedBox(
+                                width: 20,
+                                height: 20,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: AppColors.primaryDark,
+                                ),
+                              )
+                            else
+                              const Icon(Icons.my_location_rounded, color: AppColors.primaryDark, size: 20),
+                            const SizedBox(width: 12),
+                            Text(
+                              _loadingGps ? 'Đang lấy vị trí...' : 'Dùng vị trí hiện tại',
+                              style: const TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w600,
+                                color: AppColors.primaryDark,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  const Row(
+                    children: [
+                      Expanded(child: Divider()),
+                      Padding(
+                        padding: EdgeInsets.symmetric(horizontal: 12),
+                        child: Text(
+                          'hoặc chọn thủ công',
+                          style: TextStyle(fontSize: 12, color: AppColors.textLight),
+                        ),
+                      ),
+                      Expanded(child: Divider()),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
                   // Province Dropdown
                   provincesAsync.when(
                     data: (provinces) {

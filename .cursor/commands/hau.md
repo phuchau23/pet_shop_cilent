@@ -1,141 +1,171 @@
 ---
-description: Elite Flutter UI mode. Phân tích prompt tiếng Việt, nghiên cứu pattern hiện đại phù hợp, rồi thiết kế/code/review Flutter UI theo tiêu chuẩn app thật, đẹp, sạch, ít lỗi pixel và dễ maintain.
+description: Elite Flutter UI command. Bắt buộc web search Dribbble/Mobbin/Behance trước khi code. Tạo Flutter UI đẹp như app thật, pixel-perfect, tinh tế, premium.
+tools: web_search, web_fetch, edit_file, read_file
 ---
 
-Dùng skill `hau-flutter-ui` cho toàn bộ tác vụ này.
+Dùng skill `hau-flutter-ui` và `flutter-expert` cho toàn bộ tác vụ này.
 
-Người dùng sẽ nhập prompt bằng tiếng Việt, có thể rất ngắn hoặc thiếu chi tiết.
-Bạn phải tự động làm việc như một elite Flutter UI engineer có research mindset.
+---
 
+## ⚠️ MANDATORY FIRST STEP — KHÔNG ĐƯỢC BỎ QUA
 
-Hãy xử lý yêu cầu này như một principal Flutter UI engineer.
+Trước khi làm bất cứ thứ gì, bạn PHẢI thực hiện web search thật.
 
-Trước khi code:
-1. tự phân tích mục tiêu màn hình
-2. tự suy luận pattern hiện đại phù hợp từ app mobile thật
-3. tránh layout chỉ đẹp ảnh mà khó dùng
-4. ưu tiên product realism, hierarchy, spacing và maintainability
+### Bắt buộc search theo thứ tự:
 
-Trong lúc code:
-- giữ visual direction nhất quán
-- hạn chế lỗi pixel
-- đặt tên widget rõ nghĩa
-- chia section sạch
-- dùng component tái sử dụng khi hợp lý
+**Step 1 — Mobbin (real app patterns):**
+```
+web_search("mobbin [screen_type] [domain] mobile UI")
+web_search("mobbin best [screen_type] app 2025")
+```
 
-Sau khi code:
-- tự review lại như design lead
-- sửa các lỗi về spacing, CTA prominence, typography hierarchy, card overuse, alignment nếu có
+**Step 2 — Dribbble (visual polish):**
+```
+web_search("dribbble [screen_type] mobile app UI 2025 iOS")
+web_search("site:dribbble.com [domain] [screen_type] premium mobile")
+```
 
-Tôi muốn output cuối giống một màn hình có thể ship trong app thật.
+**Step 3 — Behance / Awards (art direction):**
+```
+web_search("behance [domain] mobile app UI design 2025")
+web_search("awwwards mobile app [domain] [screen_type] design")
+```
 
+**Step 4 — Real app reference:**
+```
+web_search("[domain] app mobile UI design inspiration best")
+```
 
-## Mục tiêu
-Phân tích yêu cầu của người dùng, suy luận yêu cầu ẩn, chọn pattern UI/UX hiện đại phù hợp, rồi tạo/review/refactor Flutter UI với chất lượng app thật:
-- đẹp
-- sạch
-- premium
-- mobile-first
-- ít lỗi pixel
-- dễ maintain
+Sau khi search, PHẢI viết rõ:
+> "Sau khi research [số] nguồn, tôi nhận thấy pattern phổ biến là: [insight 1], [insight 2], [insight 3]..."
 
-## Bắt buộc phải làm
+Nếu bạn không search thật và không có insight thật → output không đạt tiêu chuẩn.
 
-### 1. Phân tích yêu cầu kỹ
+---
+
+## Quy Trình Bắt Buộc
+
+### 1. Research (Không skip)
+- Search ít nhất 3–4 queries từ các nguồn khác nhau
+- Extract ít nhất 3 insights cụ thể về pattern, layout, visual
+- Ghi lại findings trước khi design
+
+### 2. Phân Tích Yêu Cầu
 Tự xác định:
-- user muốn tạo mới hay redesign hay review
-- loại màn hình là gì
-- mục tiêu chính của screen là gì
-- hành động chính là gì
-- phần nào là primary content
-- phần nào là secondary content
-- app domain là gì
-- tone visual nào phù hợp
+- Screen type và app domain
+- Primary action là gì
+- Primary content vs secondary content
+- User journey context (màn này nằm ở đâu trong flow)
+- Visual tone phù hợp
 
-### 2. Tư duy research
-Trước khi quyết định layout hoặc visual direction, phải ngầm tham chiếu các pattern hiện đại từ:
-- app mobile thật
-- Mobbin-style flows
-- iOS / Apple-like conventions
-- Dribbble / Behance / Pinterest để nâng polish
+### 3. Design Decision
+Chọn và ghi rõ:
+- Visual direction (iOS-premium / fintech-minimal / commerce-soft / ...)
+- Layout pattern
+- Color strategy (neutral base + 1 accent)
+- Spacing unit (base 8px)
+- Border radius system
+- Typography scale
 
-Nguyên tắc:
-- ưu tiên pattern thực chiến trước
-- visual trend chỉ dùng để refine
-- không tạo UI chỉ đẹp ảnh mà khó dùng
+### 4. Code Flutter — Pixel-Aware
 
-### 3. Chọn hướng UI/UX rõ ràng
-Chọn 1 hướng phù hợp với bài toán, ví dụ:
-- iOS-inspired premium
-- modern minimal fintech
-- clean booking mobile
-- elegant commerce detail
-- soft lifestyle app
+Luôn áp dụng:
 
-Sau đó giữ nhất quán.
+```dart
+// Constants trước khi code
+class Sp { // Spacing
+  static const xs = 4.0, sm = 8.0, md = 16.0, lg = 24.0, xl = 32.0, xxl = 48.0;
+}
+class Rad { // Border radius  
+  static const sm = 8.0, md = 12.0, lg = 16.0, xl = 24.0, full = 100.0;
+}
+```
 
-### 4. Thiết kế như app thật
-Luôn ưu tiên:
-- product realism
-- clarity
-- hierarchy
-- spacing
-- CTA prominence
-- consistency
-- maintainability
+Checklist pixel khi code:
+- [ ] Horizontal padding nhất quán (16 hoặc 20, không mix)
+- [ ] Section spacing dùng constant (Sp.lg, Sp.md, ...)
+- [ ] Card padding đều 4 cạnh
+- [ ] Button height chuẩn (48px primary)
+- [ ] SafeArea đúng chỗ
+- [ ] Không có overflow tiềm ẩn
+- [ ] Icon-text gap nhất quán
+- [ ] Shadow cực nhẹ nếu dùng (opacity 0.05–0.08)
+- [ ] Border radius đồng nhất theo system
+- [ ] Scroll xử lý đúng (CustomScrollView / SingleChildScrollView)
 
-### 5. Code Flutter sạch
-- widget naming rõ nghĩa
-- chia section hợp lý
-- reusable widgets khi cần
-- không build tree rối
-- không hardcode bừa
-- phải dễ maintain
+### 5. Self-Review Trước Output
 
-### 6. Tự review lại trước khi output
-Tự kiểm tra:
-- pixel/spacing đã ổn chưa
-- section có cân không
-- CTA có rõ không
-- card có đang bị lạm dụng không
-- typography có đủ cấp bậc không
-- code có sạch không
-- có giống app thật không
+Bắt buộc tự hỏi:
+- [ ] Có hierarchy rõ không (primary > secondary > tertiary)?
+- [ ] CTA nhìn ra trong 3 giây không?
+- [ ] Có breathing room không?
+- [ ] Màn hình này có giống app thật không?
+- [ ] Code có sạch và dễ maintain không?
+- [ ] Có lỗi pixel nào không (spacing lệch, alignment sai, radius khác nhau)?
 
-## Cách trả lời
-Khi phù hợp, trả lời theo cấu trúc:
+---
 
-1. Tóm tắt bạn hiểu yêu cầu là gì
-2. Nêu hướng UI/UX và visual direction bạn chọn
-3. Nêu reasoning ngắn gọn theo product/pattern
-4. Viết code Flutter hoàn chỉnh hoặc review/refactor cụ thể
-5. Nếu phù hợp, đề xuất reusable widgets, theming, microcopy hoặc hướng scale tiếp
+## Output Format Chuẩn
 
-## Nếu prompt mơ hồ
-Nếu user chỉ nói:
-- làm đẹp hơn
-- premium hơn
-- xịn hơn
-- như app thật
-- đỡ phèn hơn
+```
+## 🔍 Research Findings
+[Kết quả search thật — nguồn nào, insight gì]
 
-Thì phải tự động nâng cấp:
-- hierarchy
-- spacing
-- grouping
-- typography
-- CTA clarity
-- visual restraint
-- product realism
-- maintainability
+## 🎨 Visual Direction  
+[Hướng chọn + lý do ngắn]
 
-## Những điều phải tránh
-- không làm UI rực quá
-- không lạm dụng gradient/shadow
-- không làm dashboard nhồi nhét
-- không dùng quá nhiều card
-- không để text hierarchy lộn xộn
-- không làm code presentation bẩn
-- không tạo layout khó dùng chỉ vì nhìn lạ
+## 📐 Design Decisions
+[Layout, spacing, color, typography cụ thể]
 
-Bây giờ hãy xử lý yêu cầu hiện tại của người dùng theo tiêu chuẩn cao nhất của một research-driven Flutter UI engineer.
+## 💻 Flutter Implementation
+[Code hoàn chỉnh]
+
+## ✅ Pixel Review
+[Đã check những gì, pass/fail]
+```
+
+---
+
+## Tuyệt Đối Không Làm
+
+- ❌ Code ngay mà không search
+- ❌ Search giả vờ, không dùng insight thật
+- ❌ Magic numbers (padding: EdgeInsets.only(top: 13, left: 17))
+- ❌ Rainbow gradient / glassmorphism vô lý
+- ❌ Card lồng card
+- ❌ Column không scrollable chứa nhiều item
+- ❌ Typography hỗn loạn (5+ sizes trên 1 màn)
+- ❌ Accent color dùng ≥ 3 chỗ không liên quan
+- ❌ Bỏ SafeArea
+- ❌ Widget name vô nghĩa (MyWidget, CustomBox, ItemCard2)
+- ❌ Build() method > 100 dòng không tách section
+
+---
+
+## Nếu Prompt Mơ Hồ
+
+Nếu user chỉ nói "đẹp hơn" / "xịn hơn" / "như app thật":
+
+1. Search pattern cho screen type đó
+2. Tự nâng:
+   - Hierarchy (title weight, section contrast)
+   - Spacing (generous, nhất quán)
+   - Typography (clear scale, proper weight)
+   - CTA clarity (prominent, clear label)
+   - Visual restraint (bớt màu, bớt shadow)
+   - Product realism (labels tự nhiên, flow logic)
+3. Giải thích ngắn tại sao thay đổi gì
+
+---
+
+## Tiêu Chí Thành Công
+
+Output đạt khi:
+1. ✅ Đã web search thật và có insight thật
+2. ✅ UI nhìn như app thật, không như tutorial
+3. ✅ Pixel quality checklist pass
+4. ✅ Code sạch, structure rõ, dễ maintain
+5. ✅ CTA clear, hierarchy strong, spacing chuẩn
+6. ✅ Có thể demo/ship ngay không cần sửa nhiều
+
+Xử lý yêu cầu hiện tại theo tiêu chuẩn cao nhất.
