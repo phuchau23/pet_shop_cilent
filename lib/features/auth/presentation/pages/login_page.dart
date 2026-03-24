@@ -1,12 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
-import 'package:flutter_svg/flutter_svg.dart';
-import 'package:font_awesome_flutter/font_awesome_flutter.dart';
-import 'package:google_sign_in/google_sign_in.dart';
 
 import '../../data/datasources/remote/auth_remote_data_source.dart';
-import '../../domain/entities/auth_response.dart';
 import '../../domain/repositories/auth_repository_impl.dart';
 import '../../domain/usecases/login_usecase.dart';
 import '../../../../core/network/api_client.dart';
@@ -51,12 +46,6 @@ class LoginPage extends StatefulWidget {
 }
 
 class _LoginPageState extends State<LoginPage> {
-  static const String _googleServerClientId = String.fromEnvironment(
-    'GOOGLE_SERVER_CLIENT_ID',
-    defaultValue:
-        '575215795478-hm9np6bf9iiprt7p32t0506ppcqv07di.apps.googleusercontent.com',
-  );
-
   final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
@@ -66,20 +55,10 @@ class _LoginPageState extends State<LoginPage> {
   String? _errorMessage;
 
   late final LoginUseCase _loginUseCase;
-  late final GoogleSignIn _googleSignIn;
 
   @override
   void initState() {
     super.initState();
-    _initializeDependencies();
-  }
-
-  void _initializeDependencies() {
-    _googleSignIn = GoogleSignIn(
-      scopes: const ['email', 'profile'],
-      serverClientId: _googleServerClientId,
-    );
-
     final apiClient = ApiClient();
     final remoteDataSource = AuthRemoteDataSourceImpl(apiClient: apiClient);
     final repository = AuthRepositoryImpl(remoteDataSource: remoteDataSource);
@@ -149,114 +128,6 @@ class _LoginPageState extends State<LoginPage> {
     }
   }
 
-  Future<void> _handleGoogleLogin() async {
-    if (_isLoading) return;
-
-    setState(() {
-      _isLoading = true;
-      _errorMessage = null;
-    });
-
-    try {
-      await _googleSignIn.signOut();
-      final googleUser = await _googleSignIn.signIn();
-
-      if (googleUser == null) {
-        return;
-      }
-
-      final googleAuth = await googleUser.authentication;
-      final idToken = googleAuth.idToken;
-
-      if (idToken == null || idToken.isEmpty) {
-        throw Exception('Không thể lấy Google idToken. Vui lòng thử lại.');
-      }
-
-      final authResponse = await _loginUseCase.loginWithGoogle(idToken);
-      await _handleLoginSuccess(authResponse);
-    } on PlatformException catch (error) {
-      _handleGooglePlatformError(error);
-    } catch (error) {
-      _handleLoginError(error);
-    } finally {
-      if (mounted) {
-        setState(() {
-          _isLoading = false;
-        });
-      }
-    }
-  }
-
-  void _handleGooglePlatformError(PlatformException error) {
-    final details =
-        '${error.code} ${error.message ?? ''} ${error.details ?? ''}'
-            .toLowerCase();
-
-    if (error.code == 'sign_in_failed' &&
-        details.contains('apiexception: 10')) {
-      _handleLoginError(
-        Exception(
-          'Google Sign-In chưa được cấu hình đúng cho Android (DEVELOPER_ERROR 10). '
-          'Hãy tạo OAuth client Android với package com.example.pet_shop và SHA1 debug, '
-          'sau đó chạy lại ứng dụng.',
-        ),
-      );
-      return;
-    }
-
-    _handleLoginError(
-      Exception(
-        'Google Sign-In thất bại (${error.code}): ${error.message ?? ''}',
-      ),
-    );
-  }
-
-  Future<void> _handleLoginSuccess(AuthResponse authResponse) async {
-    await TokenStorage.saveToken(
-      token: authResponse.token,
-      refreshToken: authResponse.refreshToken,
-      expiresAt: authResponse.expiresAt,
-    );
-
-    await UserStorage.saveUser(
-      userId: authResponse.user.userId,
-      email: authResponse.user.email,
-      fullName: authResponse.user.fullName,
-    );
-
-    if (!mounted) return;
-
-    ToastNotification.success(
-      context,
-      'Đăng nhập thành công! Xin chào ${authResponse.user.fullName}',
-    );
-
-    await Future.delayed(const Duration(milliseconds: 100));
-
-    if (!mounted) return;
-
-    Navigator.of(context).pushAndRemoveUntil(
-      MaterialPageRoute(builder: (context) => const BottomNavBar()),
-      (route) => false,
-    );
-  }
-
-  void _handleLoginError(Object error) {
-    final errorMsg = error.toString().replaceAll('Exception: ', '');
-
-    setState(() {
-      _errorMessage = errorMsg;
-    });
-
-    if (!mounted) return;
-
-    ToastNotification.error(
-      context,
-      errorMsg,
-      duration: const Duration(seconds: 4),
-    );
-  }
-
   static List<BoxShadow> get _fieldShadow => [
     BoxShadow(
       color: Colors.black.withValues(alpha: 0.07),
@@ -270,14 +141,6 @@ class _LoginPageState extends State<LoginPage> {
       color: AppColors.primaryDark.withValues(alpha: 0.35),
       blurRadius: 18,
       offset: const Offset(0, 8),
-    ),
-  ];
-
-  static List<BoxShadow> get _socialShadow => [
-    BoxShadow(
-      color: Colors.black.withValues(alpha: 0.05),
-      blurRadius: 10,
-      offset: const Offset(0, 4),
     ),
   ];
 
@@ -302,164 +165,138 @@ class _LoginPageState extends State<LoginPage> {
           gradient: LinearGradient(
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
-            colors: [
-              AppColors.primaryVeryLight,
-              AppColors.surface,
-            ],
+            colors: [AppColors.primaryVeryLight, AppColors.surface],
             stops: [0.0, 0.42],
           ),
         ),
         child: SafeArea(
-          child: LayoutBuilder(
-            builder: (context, constraints) {
-              final minH = constraints.maxHeight;
-              return RepaintBoundary(
-                child: SingleChildScrollView(
-                  padding: EdgeInsets.fromLTRB(
-                    Sp.lg,
-                    Sp.xl,
-                    Sp.lg,
-                    Sp.lg + bottomInset,
-                  ),
-                  child: ConstrainedBox(
-                    constraints: BoxConstraints(minHeight: minH),
-                    child: Form(
-                      key: _formKey,
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.stretch,
-                            children: [
-                              _loginEntranceAt(
-                                _buildHeaderBlock(),
-                                Duration.zero,
-                              ),
-                              const SizedBox(height: Sp.xl + Sp.sm),
-                              if (_errorMessage != null) ...[
-                                KeyedSubtree(
-                                  key: ValueKey(_errorMessage),
-                                  child: _loginEntranceAt(
-                                    _buildErrorBanner(),
-                                    const Duration(milliseconds: 70),
-                                  ),
-                                ),
-                                const SizedBox(height: Sp.md),
-                              ],
-                              _loginEntranceAt(
-                                _floatingField(
-                                  child: TextFormField(
-                                    controller: _emailController,
-                                    keyboardType: TextInputType.emailAddress,
-                                    autocorrect: false,
-                                    style: const TextStyle(
-                                      fontSize: 15,
-                                      fontWeight: FontWeight.w500,
-                                      color: AppColors.textPrimary,
-                                    ),
-                                    decoration: _plainFieldDeco('Email'),
-                                    validator: (value) {
-                                      if (value == null || value.isEmpty) {
-                                        return 'Vui lòng nhập email';
-                                      }
-                                      if (!value.contains('@')) {
-                                        return 'Email không hợp lệ';
-                                      }
-                                      return null;
-                                    },
-                                  ),
-                                ),
-                                const Duration(milliseconds: 120),
-                              ),
-                              const SizedBox(height: Sp.lg),
-                              _loginEntranceAt(
-                                _floatingField(
-                                  child: TextFormField(
-                                    controller: _passwordController,
-                                    obscureText: _obscurePassword,
-                                    style: const TextStyle(
-                                      fontSize: 15,
-                                      fontWeight: FontWeight.w500,
-                                      color: AppColors.textPrimary,
-                                    ),
-                                    decoration:
-                                        _plainFieldDeco('Mật khẩu').copyWith(
-                                      suffixIcon: IconButton(
-                                        icon: Icon(
-                                          _obscurePassword
-                                              ? Icons.visibility_off_outlined
-                                              : Icons.visibility_outlined,
-                                          size: 22,
-                                          color: AppColors.textSecondary,
-                                        ),
-                                        onPressed: () {
-                                          setState(() => _obscurePassword =
-                                              !_obscurePassword);
-                                        },
-                                      ),
-                                    ),
-                                    validator: (value) {
-                                      if (value == null || value.isEmpty) {
-                                        return 'Vui lòng nhập mật khẩu';
-                                      }
-                                      if (value.length < 6) {
-                                        return 'Mật khẩu phải có ít nhất 6 ký tự';
-                                      }
-                                      return null;
-                                    },
-                                  ),
-                                ),
-                                const Duration(milliseconds: 175),
-                              ),
-                              _loginEntranceAt(
-                                Align(
-                                  alignment: Alignment.centerRight,
-                                  child: TextButton(
-                                    onPressed: () {},
-                                    style: TextButton.styleFrom(
-                                      foregroundColor: AppColors.primaryDark,
-                                      padding: const EdgeInsets.symmetric(
-                                        vertical: Sp.xs,
-                                      ),
-                                      textStyle: const TextStyle(
-                                        fontWeight: FontWeight.w600,
-                                        fontSize: 13,
-                                      ),
-                                    ),
-                                    child: const Text('Quên mật khẩu?'),
-                                  ),
-                                ),
-                                const Duration(milliseconds: 220),
-                              ),
-                              const SizedBox(height: Sp.sm),
-                              _loginEntranceAt(
-                                _buildPrimaryButton(),
-                                const Duration(milliseconds: 265),
-                              ),
-                              const SizedBox(height: Sp.lg + Sp.xs),
-                              _loginEntranceAt(
-                                _buildSocialDivider(),
-                                const Duration(milliseconds: 310),
-                              ),
-                              const SizedBox(height: Sp.lg),
-                              _buildSocialRow(),
-                            ],
+          child: RepaintBoundary(
+            child: SingleChildScrollView(
+              padding: EdgeInsets.fromLTRB(
+                Sp.lg,
+                Sp.xl,
+                Sp.lg,
+                Sp.lg + bottomInset,
+              ),
+              child: Form(
+                key: _formKey,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    _loginEntranceAt(
+                      _buildHeaderBlock(),
+                      Duration.zero,
+                    ),
+                    const SizedBox(height: Sp.lg),
+                    _loginEntranceAt(
+                      _buildSignupFooter(),
+                      const Duration(milliseconds: 50),
+                    ),
+                    const SizedBox(height: Sp.xl + Sp.sm),
+                    if (_errorMessage != null) ...[
+                      KeyedSubtree(
+                        key: ValueKey(_errorMessage),
+                        child: _loginEntranceAt(
+                          _buildErrorBanner(),
+                          const Duration(milliseconds: 70),
+                        ),
+                      ),
+                      const SizedBox(height: Sp.md),
+                    ],
+                    _loginEntranceAt(
+                      _floatingField(
+                        child: TextFormField(
+                          controller: _emailController,
+                          keyboardType: TextInputType.emailAddress,
+                          autocorrect: false,
+                          style: const TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w500,
+                            color: AppColors.textPrimary,
                           ),
-                          Padding(
-                            padding: const EdgeInsets.only(top: Sp.xl),
-                            child: _loginEntranceAt(
-                              _buildSignupFooter(),
-                              const Duration(milliseconds: 420),
+                          decoration: _plainFieldDeco('Email'),
+                          validator: (value) {
+                            if (value == null || value.isEmpty) {
+                              return 'Vui lòng nhập email';
+                            }
+                            if (!value.contains('@')) {
+                              return 'Email không hợp lệ';
+                            }
+                            return null;
+                          },
+                        ),
+                      ),
+                      const Duration(milliseconds: 120),
+                    ),
+                    const SizedBox(height: Sp.lg),
+                    _loginEntranceAt(
+                      _floatingField(
+                        child: TextFormField(
+                          controller: _passwordController,
+                          obscureText: _obscurePassword,
+                          style: const TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w500,
+                            color: AppColors.textPrimary,
+                          ),
+                          decoration: _plainFieldDeco('Mật khẩu').copyWith(
+                            suffixIcon: IconButton(
+                              icon: Icon(
+                                _obscurePassword
+                                    ? Icons.visibility_off_outlined
+                                    : Icons.visibility_outlined,
+                                size: 22,
+                                color: AppColors.textSecondary,
+                              ),
+                              onPressed: () {
+                                setState(
+                                  () => _obscurePassword = !_obscurePassword,
+                                );
+                              },
                             ),
                           ),
-                        ],
+                          validator: (value) {
+                            if (value == null || value.isEmpty) {
+                              return 'Vui lòng nhập mật khẩu';
+                            }
+                            if (value.length < 6) {
+                              return 'Mật khẩu phải có ít nhất 6 ký tự';
+                            }
+                            return null;
+                          },
+                        ),
                       ),
+                      const Duration(milliseconds: 175),
                     ),
-                  ),
+                    _loginEntranceAt(
+                      Align(
+                        alignment: Alignment.centerRight,
+                        child: TextButton(
+                          onPressed: () {},
+                          style: TextButton.styleFrom(
+                            foregroundColor: AppColors.primaryDark,
+                            padding: const EdgeInsets.symmetric(
+                              vertical: Sp.xs,
+                            ),
+                            textStyle: const TextStyle(
+                              fontWeight: FontWeight.w600,
+                              fontSize: 13,
+                            ),
+                          ),
+                          child: const Text('Quên mật khẩu?'),
+                        ),
+                      ),
+                      const Duration(milliseconds: 220),
+                    ),
+                    const SizedBox(height: Sp.sm),
+                    _loginEntranceAt(
+                      _buildPrimaryButton(),
+                      const Duration(milliseconds: 265),
+                    ),
+                  ],
                 ),
-              );
-            },
+              ),
+            ),
           ),
         ),
       ),
@@ -607,101 +444,6 @@ class _LoginPageState extends State<LoginPage> {
                     ),
                   ),
           ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildSocialDivider() {
-    return Row(
-      children: [
-        Expanded(
-          child: Divider(
-            color: AppColors.textLight.withValues(alpha: 0.28),
-            thickness: 1,
-          ),
-        ),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: Sp.md),
-          child: Text(
-            'Hoặc đăng nhập với',
-            style: TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w500,
-              color: AppColors.textSecondary,
-              letterSpacing: 0.15,
-            ),
-          ),
-        ),
-        Expanded(
-          child: Divider(
-            color: AppColors.textLight.withValues(alpha: 0.28),
-            thickness: 1,
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildSocialRow() {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-      children: [
-        _loginEntranceAt(
-          _socialSquare(
-            onTap: _isLoading ? null : _handleGoogleLogin,
-            child: SvgPicture.asset(
-              'assets/icon/google_icon.svg',
-              width: 26,
-              height: 26,
-            ),
-          ),
-          const Duration(milliseconds: 350),
-        ),
-        _loginEntranceAt(
-          _socialSquare(
-            onTap: _isLoading ? null : () {},
-            child: FaIcon(
-              FontAwesomeIcons.facebookF,
-              size: 22,
-              color: Colors.blue.shade700,
-            ),
-          ),
-          const Duration(milliseconds: 395),
-        ),
-        _loginEntranceAt(
-          _socialSquare(
-            onTap: _isLoading ? null : () {},
-            child: FaIcon(
-              FontAwesomeIcons.xTwitter,
-              size: 20,
-              color: AppColors.textPrimary,
-            ),
-          ),
-          const Duration(milliseconds: 440),
-        ),
-      ],
-    );
-  }
-
-  Widget _socialSquare({required Widget child, VoidCallback? onTap}) {
-    return Material(
-      color: AppColors.surface,
-      elevation: 0,
-      borderRadius: BorderRadius.circular(Rad.md),
-      shadowColor: Colors.transparent,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(Rad.md),
-        child: Container(
-          width: 64,
-          height: 64,
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(Rad.md),
-            color: AppColors.surface,
-            boxShadow: _socialShadow,
-          ),
-          child: Center(child: child),
         ),
       ),
     );

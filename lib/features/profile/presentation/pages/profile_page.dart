@@ -43,6 +43,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage>
   String? _userName;
   String? _userEmail;
   String? _userPhone;
+  String? _userRole;
   bool _isLoadingFromStorage = true;
   late AnimationController _animationController;
   late Animation<double> _fadeAnimation;
@@ -80,12 +81,14 @@ class _ProfilePageState extends ConsumerState<ProfilePage>
       final fullName = await UserStorage.getUserFullName();
       final email = await UserStorage.getUserEmail();
       final phone = await UserStorage.getUserPhone();
+      final role = await UserStorage.getUserRole();
 
       if (mounted) {
         setState(() {
           _userName = fullName;
           _userEmail = email;
           _userPhone = phone;
+          _userRole = role;
           _isLoadingFromStorage = false;
         });
       }
@@ -154,6 +157,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage>
 
   @override
   Widget build(BuildContext context) {
+    final isShipper = _userRole == '3' || _userRole == 'Shipper';
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
@@ -200,72 +204,69 @@ class _ProfilePageState extends ConsumerState<ProfilePage>
                                 title: 'Thông tin cá nhân',
                                 onTap: _loadProfileFromAPI,
                               ),
-                              _ProfileMenuItem(
-                                icon: Icons.location_on_outlined,
-                                title: 'Địa chỉ giao hàng',
-                                onTap: () {
-                                  // TODO: Navigate to addresses
-                                },
-                              ),
                             ],
                           ),
-                          const SizedBox(height: _Sp.lg),
-                          _AnimatedMenuSection(
-                            title: 'Đơn hàng',
-                            delay: const Duration(milliseconds: 300),
-                            children: [
-                              _ProfileMenuItem(
-                                icon: Icons.receipt_long_outlined,
-                                title: 'Đơn hàng của tôi',
-                                onTap: () {
-                                  Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                      builder: (context) =>
-                                          const MyOrdersPage(),
-                                    ),
-                                  );
-                                },
-                              ),
-                              _ProfileMenuItem(
-                                icon: Icons.favorite_outline_rounded,
-                                title: 'Sản phẩm yêu thích',
-                                onTap: () {
-                                  // TODO: Navigate to favorites
-                                },
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: _Sp.lg),
-                          _AnimatedMenuSection(
-                            title: 'Tùy chọn',
-                            delay: const Duration(milliseconds: 400),
-                            children: [
-                              _ProfileMenuItem(
-                                icon: Icons.notifications_outlined,
-                                title: 'Thông báo',
-                                onTap: () {
-                                  // TODO: Navigate to notifications
-                                },
-                              ),
-                              _ProfileMenuItem(
-                                icon: Icons.settings_outlined,
-                                title: 'Cài đặt',
-                                onTap: () {
-                                  Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                      builder: (context) =>
-                                          const SettingsPage(),
-                                    ),
-                                  );
-                                },
-                              ),
-                            ],
-                          ),
+                          if (!isShipper) ...[
+                            const SizedBox(height: _Sp.lg),
+                            _AnimatedMenuSection(
+                              title: 'Đơn hàng',
+                              delay: const Duration(milliseconds: 300),
+                              children: [
+                                _ProfileMenuItem(
+                                  icon: Icons.receipt_long_outlined,
+                                  title: 'Đơn hàng của tôi',
+                                  onTap: () {
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (context) =>
+                                            const MyOrdersPage(),
+                                      ),
+                                    );
+                                  },
+                                ),
+                                _ProfileMenuItem(
+                                  icon: Icons.favorite_outline_rounded,
+                                  title: 'Sản phẩm yêu thích',
+                                  onTap: () {
+                                    // TODO: Navigate to favorites
+                                  },
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: _Sp.lg),
+                            _AnimatedMenuSection(
+                              title: 'Tùy chọn',
+                              delay: const Duration(milliseconds: 400),
+                              children: [
+                                _ProfileMenuItem(
+                                  icon: Icons.notifications_outlined,
+                                  title: 'Thông báo',
+                                  onTap: () {
+                                    // TODO: Navigate to notifications
+                                  },
+                                ),
+                                _ProfileMenuItem(
+                                  icon: Icons.settings_outlined,
+                                  title: 'Cài đặt',
+                                  onTap: () {
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (context) =>
+                                            const SettingsPage(),
+                                      ),
+                                    );
+                                  },
+                                ),
+                              ],
+                            ),
+                          ],
                           const SizedBox(height: _Sp.lg),
                           _AnimatedLogoutButton(
-                            delay: const Duration(milliseconds: 500),
+                            delay: Duration(
+                              milliseconds: isShipper ? 300 : 500,
+                            ),
                             onLogout: _handleLogout,
                           ),
                         ]),

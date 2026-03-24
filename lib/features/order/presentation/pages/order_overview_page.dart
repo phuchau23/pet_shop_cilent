@@ -3,12 +3,14 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/storage/user_storage.dart';
 import '../../../../core/storage/store_storage.dart';
 import '../../../../core/network/api_client.dart';
 import '../../../../core/services/location_service.dart';
 import '../../../locations/presentation/providers/location_provider.dart';
 import '../../data/services/gps_address_resolver.dart';
 import '../../../cart/domain/entities/cart_item.dart';
+import '../../../cart/presentation/providers/cart_provider.dart';
 import '../../../products/presentation/pages/product_detail_page.dart';
 import '../../../auth/data/datasources/remote/auth_remote_data_source.dart';
 import '../../domain/entities/address_result.dart';
@@ -19,6 +21,7 @@ import '../../data/models/create_order_request_dto.dart';
 import '../../data/datasources/remote/order_remote_data_source.dart';
 import 'address_selection_page.dart';
 import 'order_tracking_page.dart';
+import 'vnpay_webview_page.dart';
 import '../widgets/checkout_voucher_sheet.dart';
 
 class OrderOverviewPage extends ConsumerStatefulWidget {
@@ -422,14 +425,51 @@ class _OrderOverviewPageState extends ConsumerState<OrderOverviewPage> {
 
       final order = await dataSource.createOrder(request);
 
-      // Order created successfully - Navigate to tracking page
+      final userId = await UserStorage.getUserId();
+      if (userId != null && mounted) {
+        final cartNotifier = ref.read(cartNotifierProvider(userId).notifier);
+        for (final cartItem in widget.selectedItems) {
+          try {
+            await cartNotifier.removeFromCart(
+              cartItem.product.productId,
+              cartItem.productSize.productSizeId,
+            );
+          } catch (_) {
+            // Giỏ có thể đã đồng bộ khác; không chặn flow đặt hàng
+          }
+        }
+        await ref.read(cartCountNotifierProvider(userId).notifier).refresh();
+      }
+
+      final bool isVnPay = _selectedPaymentMethod == 2;
+      if (isVnPay && order.paymentUrl != null && order.paymentUrl!.isNotEmpty) {
+        if (!mounted) return;
+        final handled = await Navigator.of(context).push<bool>(
+          MaterialPageRoute(
+            builder: (context) => VnPayWebViewPage(
+              paymentUrl: order.paymentUrl!,
+            ),
+          ),
+        );
+        if (handled != true && mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text(
+                'Đơn đã tạo. Bạn có thể tiếp tục thanh toán trong lần mở lại đơn hàng.',
+              ),
+              backgroundColor: AppColors.warning,
+            ),
+          );
+        }
+      }
+
+      // Sau khi tạo đơn (và mở VNPay nếu có), quay về trang theo dõi đơn
       if (mounted) {
-        // Pop tất cả các màn hình trước đó và navigate đến tracking page
         Navigator.of(context).pushAndRemoveUntil(
           MaterialPageRoute(
             builder: (context) => OrderTrackingPage(orderId: order.id),
           ),
-          (route) => false, // Xóa tất cả routes trước đó
+          (route) => false,
         );
       }
     } catch (e) {

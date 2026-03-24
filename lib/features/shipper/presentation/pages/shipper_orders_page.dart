@@ -427,6 +427,7 @@ class _ShipperOrdersPageState extends State<ShipperOrdersPage>
     required bool showAcceptButton,
     bool showDeliverButton = false,
   }) {
+    final bool isPaid = _isPaidOrder(order);
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
       elevation: 2,
@@ -491,9 +492,13 @@ class _ShipperOrdersPageState extends State<ShipperOrdersPage>
               const SizedBox(height: 8),
               _buildInfoRow(
                 Icons.payments,
-                'Tổng tiền',
+                isPaid ? 'Đã thanh toán' : 'Tổng tiền',
                 '${order.finalAmount!.toStringAsFixed(0)} đ',
               ),
+            ],
+            if (order.finalAmount != null && !isPaid) ...[
+              const SizedBox(height: 8),
+              _buildInfoRow(Icons.info_outline, 'Thanh toán', 'Chưa thanh toán'),
             ],
             // Map preview và route (chỉ hiển thị cho available orders)
             if (showAcceptButton &&
@@ -549,6 +554,14 @@ class _ShipperOrdersPageState extends State<ShipperOrdersPage>
         ),
       ),
     );
+  }
+
+  bool _isPaidOrder(ShipperOrderResponseDto order) {
+    if (order.paymentStatus != null) {
+      // Quy ước phổ biến BE: 2 = paid/success
+      return order.paymentStatus == 2;
+    }
+    return false;
   }
 
   Widget _buildInfoRow(IconData icon, String label, String value) {

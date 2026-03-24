@@ -11,6 +11,8 @@ class CreateOrderResponseDto {
   final double finalAmount; // ⭐ Tổng tiền cuối cùng (sau giảm giá) - từ BE
   final String? voucherCode;
   final String? note;
+  final int? paymentStatus;
+  final String? paymentUrl;
   final String createdAt;
   final List<OrderItemResponseDto> items;
 
@@ -27,6 +29,8 @@ class CreateOrderResponseDto {
     required this.finalAmount,
     this.voucherCode,
     this.note,
+    this.paymentStatus,
+    this.paymentUrl,
     required this.createdAt,
     required this.items,
   });
@@ -49,6 +53,8 @@ class CreateOrderResponseDto {
       finalAmount: (json['finalAmount'] as num).toDouble(),
       voucherCode: json['voucherCode'] as String?,
       note: json['note'] as String?,
+      paymentStatus: (json['paymentStatus'] as num?)?.toInt(),
+      paymentUrl: json['paymentUrl'] as String?,
       createdAt: json['createdAt'] as String,
       items: (json['items'] as List)
           .map((item) => OrderItemResponseDto.fromJson(item as Map<String, dynamic>))

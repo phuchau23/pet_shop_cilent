@@ -6,6 +6,12 @@ import 'package:flutter/foundation.dart' show TargetPlatform;
 import 'interceptors/auth_interceptor.dart';
 
 class ApiClient {
+  // Backend deploy (Render): https://pet-shop-ydyr.onrender.com/api/...
+  // Đặt false để dev với BE chạy local (localhost / emulator / IP LAN).
+  static const bool _useDeployedBackend = true;
+  static const String _deployedBaseUrl =
+      'https://pet-shop-ydyr.onrender.com/api';
+
   // Nếu chạy trên Chrome (web), dùng: 'http://localhost:5000/api'
   // Nếu chạy trên Android Emulator, dùng: 'http://10.0.2.2:5000/api'
   // Nếu chạy trên iOS Simulator, dùng: 'http://localhost:5000/api'
@@ -98,6 +104,10 @@ class ApiClient {
   }
 
   static String get baseUrl {
+    if (_useDeployedBackend) {
+      return _deployedBaseUrl;
+    }
+
     // Kiểm tra nếu đang chạy trên web (Chrome)
     if (kIsWeb) {
       // Chrome/Web browser - dùng 127.0.0.1 thay vì localhost để tránh CORS issues
@@ -168,7 +178,7 @@ class ApiClient {
   }
 
   Future<void> _updateBaseUrlIfRealDevice() async {
-    if (kIsWeb) return;
+    if (kIsWeb || _useDeployedBackend) return;
 
     try {
       bool isRealDevice = false;

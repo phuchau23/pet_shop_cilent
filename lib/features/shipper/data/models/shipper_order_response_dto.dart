@@ -19,6 +19,7 @@ class ShipperOrderResponseDto {
   final String? note;
   final double? deliveryFee;
   final String? paymentMethod;
+  final int? paymentStatus;
   final String createdAt;
   final String updatedAt;
   final List<ShipperOrderItemDto> items;
@@ -44,6 +45,7 @@ class ShipperOrderResponseDto {
     this.note,
     this.deliveryFee,
     this.paymentMethod,
+    this.paymentStatus,
     required this.createdAt,
     required this.updatedAt,
     required this.items,
@@ -86,6 +88,7 @@ class ShipperOrderResponseDto {
       note: safeString(json['note']),
       deliveryFee: (json['deliveryFee'] as num?)?.toDouble(),
       paymentMethod: safeString(json['paymentMethod']),
+      paymentStatus: (json['paymentStatus'] as num?)?.toInt(),
       createdAt: safeStringRequired(json['createdAt']),
       updatedAt: safeStringRequired(json['updatedAt']),
       items:
