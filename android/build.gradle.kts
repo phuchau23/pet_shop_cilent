@@ -1,3 +1,5 @@
+import com.android.build.gradle.LibraryExtension
+
 allprojects {
     repositories {
         google()
@@ -17,6 +19,19 @@ subprojects {
 }
 subprojects {
     project.evaluationDependsOn(":app")
+}
+
+subprojects {
+    plugins.withId("com.android.library") {
+        extensions.configure<LibraryExtension>("android") {
+            if (namespace == null) {
+                namespace = when (project.name) {
+                    "isar_flutter_libs" -> "dev.isar.isar_flutter_libs"
+                    else -> "com.example.${project.name.replace('-', '_')}"
+                }
+            }
+        }
+    }
 }
 
 tasks.register<Delete>("clean") {
